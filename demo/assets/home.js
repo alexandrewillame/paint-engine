@@ -31,9 +31,8 @@
   document.addEventListener('touchstart', firstTouch, { passive: true });
 
   // ── the hero paints itself once, so a visitor sees paint before touching anything ──
+  const title = document.getElementById('heroTitle');
   async function intro() {
-    const title = document.getElementById('heroTitle');
-    if (!title) return;
     // the words' own box: the heading itself is as wide as its column
     const range = document.createRange();
     range.selectNodeContents(title);
@@ -59,8 +58,22 @@
     }
     page.splat(x + w * 0.1, y - 26, { color: '#F7941E', seed: 12, size: narrow ? 14 : 18 });
   }
-  const start = () => setTimeout(intro, 350);
-  if (document.readyState === 'complete') start(); else window.addEventListener('load', start);
+  // Once the title is on screen, not on load: a page can load hidden or before its window has a
+  // size (a tab opened in the background, a browser pane still opening), with no layout to place
+  // the strokes by and nothing to paint them into, or scrolled away from the hero (a reload),
+  // where they'd land outside the paint tile and be dropped.
+  function start() {
+    if (!('IntersectionObserver' in window)) { setTimeout(intro, 350); return; }
+    const io = new IntersectionObserver((entries) => {
+      if (!entries.some((en) => en.intersectionRatio >= 0.5)) return;
+      io.disconnect();
+      setTimeout(intro, 350);
+    }, { threshold: 0.5 });
+    io.observe(title);
+  }
+  if (title) {
+    if (document.readyState === 'complete') start(); else window.addEventListener('load', start);
+  }
 
   // ── gesture swatches ──
   // Each is its own little engine on its own paper, painting one gesture from code. Built when it

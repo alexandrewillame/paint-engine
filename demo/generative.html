@@ -244,7 +244,14 @@ io.observe(covers);
 const params = new URLSearchParams(location.search);
 if (params.get('seed')) document.getElementById('seed').value = params.get('seed');
 if (params.get('style')) document.getElementById('style').value = params.get('style');
-paintBig(true);
+// painted once it's on screen: a page can load hidden or before its window has a size, with no
+// canvas size to paint at yet
+const onScreen = new IntersectionObserver((entries) => {
+  if (!entries.some((en) => en.isIntersecting)) return;
+  onScreen.disconnect();
+  if (!big) paintBig(true);
+});
+onScreen.observe(art);
 </script>
 </body>
 </html>
