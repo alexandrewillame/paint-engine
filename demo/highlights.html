@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brush highlights · Paint Engine</title>
+<meta name="description" content="Highlight, underline and circle words with real brush strokes, painted as they scroll into view.">
+<link rel="icon" href="assets/img/mark-64.png" type="image/png">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .article {
+    /* its own stacking context, so each highlight's canvas (z-index:-1) lies under the text but
+       above the page */
+    position: relative; z-index: 0;
+    width: min(680px, 100% - 2 * var(--gutter));
+    margin: 24px auto 120px;
+    font-size: 19px; line-height: 1.75;
+  }
+  .article h1 { font-size: clamp(40px, 7vw, 64px); margin: 18px 0 22px; line-height: 1.05; }
+  .article h2 { font-size: clamp(28px, 4.4vw, 36px); margin: 56px 0 14px; }
+  .article p { margin: 0 0 20px; color: #2a2420; }
+  .article .kicker { font: 700 13px/1.3 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .article .note { font-size: 16px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; margin-top: 48px; }
+  /* annotated words: plain text; the paint is drawn by the script below */
+  [data-paint] { position: relative; }
+  .ink { position: absolute; z-index: -1; pointer-events: none; }
+  pre.code { margin: 0 0 22px; }
+</style>
+</head>
+<body>
+<header class="demo-bar demo-bar--static">
+  <a class="chip" href="../"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m6-6-6 6 6 6"/></svg>Paint Engine</a>
+  <span class="chip chip--title">Brush highlights</span>
+  <span class="spacer"></span>
+  <a class="chip" href="https://github.com/alexandrewillame/paint-engine/blob/main/demo/highlights.html">Source</a>
+</header>
+
+<article class="article" id="article">
+  <p class="kicker">Brush highlights demo</p>
+  <h1><span data-paint="swash" data-color="#F7941E">How a stroke</span> gets made</h1>
+  <p>Every highlight on this page is a real brush stroke, painted by the same engine as everything else. Scroll, and watch them land. <span data-paint="highlight" data-color="#FFD23F">Nothing here is an image or an SVG</span>: each one is fresh paint, different every time you load the page.</p>
+
+  <h2><span data-paint="swash" data-color="#17A6B5">Smoothing the hand</span></h2>
+  <p>A finger on glass reports its position up to a hundred and twenty times a second, and every report is a little wrong. The engine first runs the points through a <span data-paint="underline" data-color="#F04E23">One-Euro filter</span>, which irons out jitter when you move slowly and gets out of the way when you move fast, so the stroke never lags behind your finger.</p>
+  <p>Then it fits a Catmull-Rom spline through what's left and resamples it at <span data-paint="highlight" data-color="#9EE6CF">even steps along its length</span>. From here on, a fast flick and a slow drag have the same number of points per centimetre; only their timestamps tell them apart.</p>
+
+  <h2><span data-paint="swash" data-color="#EE4C9B">Paint, one dab at a time</span></h2>
+  <p>There is no "stroke shape" anywhere in the code. Each mark is <span data-paint="circle" data-color="#3B12E8">hundreds</span> of tiny, slightly irregular dabs, stamped one over another with plain alpha blending. Speed decides how they're laid: a slow drag is a <span data-paint="highlight" data-color="#FFD23F">loaded brush</span>, wide and dense; a fast one runs dry, narrower and full of gaps.</p>
+  <p>On top go the details a real brush leaves: bristle streaks that follow the curve, a frayed touchdown, a glossy edge, a soft cast shadow, and droplets <span data-paint="underline" data-color="#3B5BA5">thrown off the flanks</span> when you're moving quickly.</p>
+
+  <h2><span data-paint="swash" data-color="#29ABE2">Letting go</span></h2>
+  <p>How you lift matters. Stop, and the stroke ends in a rounded blob. Lift while you're still moving and it carries on past your finger as a <span data-paint="highlight" data-color="#FFB4A2">flicked tail</span>, tapering and breaking into flecks.</p>
+  <p>Every random choice comes from a seed, so the same input always paints <span data-paint="circle" data-color="#F04E23">exactly</span> the same pixels. That is what makes undo, replay and resizing possible.</p>
+
+  <h2><span data-paint="swash" data-color="#8B5FBF">Doing this on your page</span></h2>
+  <p>Each highlight here is a small canvas behind its words, with a stroke painted along the line from code:</p>
+  <pre class="code"><code><span class="k">const</span> paint = PaintEngine.mount(box, { input: <span class="k">false</span>, scale: <span class="k">0.8</span> });
+PaintEngine.paintStroke(paint, [[<span class="k">0</span>, <span class="k">16</span>], [<span class="k">240</span>, <span class="k">14</span>]], {
+  speed: <span class="k">700</span>, color: <span class="s">'#FFD23F'</span>, animate: <span class="k">true</span>,
+});</code></pre>
+  <p>The <span data-paint="highlight" data-color="#9EE6CF">scale option</span> sets the brush size, so a highlight fits its line height whatever the font.</p>
+  <p class="note">Highlights repaint when the text reflows (resize the window to see). <button class="linkish" type="button" id="again">Paint them all again</button></p>
+</article>
+
+<script src="../paint-engine.js"></script>
+<script>
+'use strict';
+const article = document.getElementById('article');
+
+// Brush width at a given speed, at scale 1 (CSS px): the engine's widthMax 20 / widthMin 12 at
+// 900 px/s, times its mark scale 2.75. Used to size each brush to the text it marks.
+const widthAt = (speed) => (20 - 8 * Math.min(speed / 900, 1)) * 2.75;
+
+// Each annotated element gets a little canvas of its own, positioned behind it inside the article.
+const marks = [...article.querySelectorAll('[data-paint]')];
+const live = new Map(); // element -> { box, paint }
+
+function linesOf(el) {
+  // one rect per line the words occupy, relative to the article
+  const a = article.getBoundingClientRect();
+  return [...el.getClientRects()].filter((r) => r.width > 2).map((r) => ({
+    x: r.left - a.left, y: r.top - a.top, w: r.width, h: r.height,
+  }));
+}
+
+const jitter = (n) => (Math.random() - 0.5) * n;
+
+function plan(el) {
+  const kind = el.dataset.paint;
+  const lines = linesOf(el);
+  if (!lines.length) return null;
+  const fontPx = parseFloat(getComputedStyle(el).fontSize);
+  const strokes = [];
+  let speed, brush;
+  if (kind === 'highlight') {
+    speed = 720; brush = fontPx * 1.35;
+    for (const r of lines) {
+      const y = r.y + r.h * 0.55;
+      strokes.push({ pts: [[r.x - 6, y + jitter(4)], [r.x + r.w * 0.5, y + jitter(3)], [r.x + r.w + 8, y + jitter(4)]], speed, endSpeed: 520 });
+    }
+  } else if (kind === 'underline') {
+    speed = 900; brush = Math.max(5, fontPx * 0.34);
+    for (const r of lines) {
+      const y = r.y + r.h * 0.86;
+      strokes.push({ pts: [[r.x - 2, y + jitter(2)], [r.x + r.w * 0.55, y + 2 + jitter(2)], [r.x + r.w + 4, y - 1 + jitter(2)]], speed, flick: true });
+    }
+  } else if (kind === 'circle') {
+    speed = 650; brush = Math.max(4, fontPx * 0.26);
+    const r = lines[0];
+    const cx = r.x + r.w / 2, cy = r.y + r.h / 2, rx = r.w / 2 + fontPx * 0.7, ry = r.h / 2 + fontPx * 0.25;
+    const pts = [];
+    const a0 = Math.PI * (0.95 + Math.random() * 0.2);
+    for (let i = 0; i <= 64; i++) {
+      const t = i / 64, a = a0 + t * Math.PI * 2.18; // a little past a full turn, like a hand
+      const wob = 1 + 0.05 * Math.sin(t * 9) + t * 0.06;
+      pts.push([cx + Math.cos(a) * rx * wob, cy + Math.sin(a) * ry * wob]);
+    }
+    strokes.push({ pts, speed, endSpeed: 950 });
+  } else { // swash: a fat stroke under a heading's words
+    speed = 620; brush = fontPx * 0.62;
+    const r = lines[0], last = lines[lines.length - 1];
+    if (lines.length === 1) {
+      const y = r.y + r.h * 0.72;
+      strokes.push({ pts: [[r.x - 10, y + 4], [r.x + r.w * 0.45, y + 8], [r.x + r.w + 18, y - 8]], speed, flick: true });
+    } else {
+      for (const l of lines) strokes.push({ pts: [[l.x - 8, l.y + l.h * 0.72], [l.x + l.w + 10, l.y + l.h * 0.66]], speed, flick: l === last });
+    }
+  }
+  return { strokes, scale: brush / widthAt(speed) };
+}
+
+function paintMark(el, animate) {
+  const old = live.get(el);
+  if (old) { old.paint.destroy(); old.box.remove(); live.delete(el); }
+  const p = plan(el);
+  if (!p) return;
+  // a box over the strokes' extent, with room for splatter and tails
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const s of p.strokes) for (const [x, y] of s.pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  const pad = 40 + 120 * p.scale;
+  const box = document.createElement('div');
+  box.className = 'ink';
+  Object.assign(box.style, { left: (x0 - pad) + 'px', top: (y0 - pad) + 'px', width: (x1 - x0 + pad * 2) + 'px', height: (y1 - y0 + pad * 2) + 'px' });
+  article.appendChild(box);
+  const paint = PaintEngine.mount(box, { input: false, paper: false, scale: p.scale });
+  live.set(el, { box, paint });
+  (async () => {
+    for (const s of p.strokes) {
+      const pts = s.pts.map(([x, y]) => [x - x0 + pad, y - y0 + pad]);
+      await PaintEngine.paintStroke(paint, pts, { speed: s.speed, endSpeed: s.endSpeed, flick: s.flick, color: el.dataset.color, animate });
+    }
+  })();
+}
+
+// Paint each mark as it scrolls well into view, one after another down the page.
+let queue = Promise.resolve();
+const io = new IntersectionObserver((entries) => {
+  for (const en of entries) {
+    if (!en.isIntersecting) continue;
+    io.unobserve(en.target);
+    queue = queue.then(() => new Promise((r) => { paintMark(en.target, true); setTimeout(r, 260); }));
+  }
+}, { rootMargin: '0px 0px -18% 0px', threshold: 1 });
+marks.forEach((m) => io.observe(m));
+
+// Text reflows on resize, so marks are repainted where the words now are (instantly). Over a copy
+// of the keys: paintMark deletes and re-adds its own entry, and a Map's iterator would visit every
+// re-added key again, forever.
+let lastW = article.clientWidth, resizeTimer = 0;
+new ResizeObserver(() => {
+  if (article.clientWidth === lastW) return;
+  lastW = article.clientWidth;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { for (const el of [...live.keys()]) paintMark(el, false); }, 120);
+}).observe(article);
+
+document.getElementById('again').addEventListener('click', () => {
+  queue = Promise.resolve();
+  for (const el of marks) queue = queue.then(() => new Promise((r) => { paintMark(el, true); setTimeout(r, 120); }));
+});
+</script>
+</body>
+</html>

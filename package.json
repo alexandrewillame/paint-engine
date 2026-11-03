@@ -1,0 +1,57 @@
+{
+  "name": "paint-engine",
+  "version": "1.0.0",
+  "description": "Procedural acrylic paint for the web: drags become brush strokes, taps become splatters. One file, zero dependencies.",
+  "main": "paint-engine.js",
+  "module": "paint-engine.mjs",
+  "types": "paint-engine.d.ts",
+  "exports": {
+    ".": {
+      "types": "./paint-engine.d.ts",
+      "import": "./paint-engine.mjs",
+      "require": "./paint-engine.js",
+      "default": "./paint-engine.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "paint-engine.js",
+    "paint-engine.mjs",
+    "paint-engine.d.ts",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "start": "npx --yes serve ."
+  },
+  "keywords": [
+    "paint",
+    "painting",
+    "brush",
+    "brush-stroke",
+    "acrylic",
+    "canvas",
+    "finger-paint",
+    "splatter",
+    "generative-art",
+    "creative-coding",
+    "drawing",
+    "procedural",
+    "zero-dependency"
+  ],
+  "author": "Alexandre Willame",
+  "license": "MIT",
+  "homepage": "https://alexandrewillame.github.io/paint-engine/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexandrewillame/paint-engine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alexandrewillame/paint-engine/issues"
+  },
+  "sideEffects": [
+    "./paint-engine.js",
+    "./paint-engine.mjs"
+  ]
+}

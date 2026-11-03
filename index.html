@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paint Engine — acrylic paint for the web</title>
+<meta name="description" content="A single-file, zero-dependency JavaScript engine that turns drags into real-looking acrylic brush strokes and taps into splatters. Paint on a canvas, or let your visitors paint all over your page.">
+<meta name="theme-color" content="#f4efe6">
+<link rel="icon" href="demo/assets/img/mark-64.png" type="image/png" sizes="64x64">
+<link rel="apple-touch-icon" href="demo/assets/img/mark-192.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Paint Engine">
+<meta property="og:title" content="Paint Engine — acrylic paint for the web. Please touch.">
+<meta property="og:description" content="Drags become brush strokes, taps become splatters. One file, zero dependencies, MIT. Try painting on the page.">
+<meta property="og:url" content="https://alexandrewillame.github.io/paint-engine/">
+<meta property="og:image" content="https://alexandrewillame.github.io/paint-engine/demo/assets/img/social-preview.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="demo/assets/style.css">
+<link rel="stylesheet" href="demo/assets/home.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="./"><img src="demo/assets/img/mark-64.png" alt="" width="30" height="30">Paint Engine</a>
+  <nav class="topbar__nav" aria-label="Main">
+    <a href="#demos">Demos</a>
+    <a href="#start" class="hide-sm">Get started</a>
+    <a class="gh" href="https://github.com/alexandrewillame/paint-engine"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- ═══ HERO ═══ The whole page is paintable (PaintEngine.paintPage, paint UNDER the content). -->
+<section class="hero wrap" id="top">
+  <p class="hero__sign"><span class="sign"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>Caution: fresh paint</span></p>
+  <h1 class="hero__title" id="heroTitle">Paint Engine</h1>
+  <p class="hero__tag">Acrylic paint for the web. <em>Please touch.</em></p>
+  <p class="lede">A single-file, zero-dependency engine that turns drags into brush strokes and taps into splatters: streaks, gloss, dry edges, flicked tails and all. Paint on a canvas, or let your visitors paint all over your page.</p>
+  <div class="hero__cta">
+    <a class="btn btn--ink" href="demo/playground.html">Open the playground
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    <a class="btn btn--line" href="https://github.com/alexandrewillame/paint-engine">Get it on GitHub</a>
+  </div>
+  <p class="hero__hint" id="hint"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5V4a1.5 1.5 0 0 1 3 0v6m0-3.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-1.2a6 6 0 0 1-4.6-2.2L3.6 15a1.6 1.6 0 0 1 2.4-2.1L9 15.5"/></svg>
+    <span>This whole page is wet. <strong>Drag anywhere</strong> to paint, tap to splatter.</span></p>
+</section>
+
+<!-- ═══ GESTURES ═══ -->
+<section class="section wrap" id="gestures">
+  <div class="section__head">
+    <p class="eyebrow">How it paints</p>
+    <h2>Speed is the brush.</h2>
+    <p>The engine reads how your hand moves and lays paint the way a loaded brush would. No tools, no settings: just the gesture.</p>
+  </div>
+  <div class="swatches">
+    <figure class="swatch" data-gesture="slow">
+      <div class="swatch__art"></div>
+      <figcaption><strong>Drag slowly</strong> A loaded brush: wide, wet and glossy, with a frayed start.</figcaption>
+    </figure>
+    <figure class="swatch" data-gesture="fast">
+      <div class="swatch__art"></div>
+      <figcaption><strong>Drag fast</strong> The brush runs dry: narrower, streaky, throwing droplets.</figcaption>
+    </figure>
+    <figure class="swatch" data-gesture="flick">
+      <div class="swatch__art"></div>
+      <figcaption><strong>Flick</strong> Lift while moving and the stroke carries on into a tapered, streaky tail.</figcaption>
+    </figure>
+    <figure class="swatch" data-gesture="tap">
+      <div class="swatch__art"></div>
+      <figcaption><strong>Tap</strong> A splatter: a wet core, tendrils, droplets and fine speckle.</figcaption>
+    </figure>
+    <figure class="swatch" data-gesture="layers">
+      <div class="swatch__art"></div>
+      <figcaption><strong>Layer</strong> Paint is translucent. Where strokes cross, it builds up like real pigment.</figcaption>
+    </figure>
+    <figure class="swatch" data-gesture="dash">
+      <div class="swatch__art"></div>
+      <figcaption><strong>Short drag</strong> Somewhere between a tap and a stroke: a smeared, thrown dash.</figcaption>
+    </figure>
+  </div>
+  <p class="swatches__note"><button class="linkish" type="button" id="replaySwatches">Paint them again</button> · every mark is procedural, so no two are alike.</p>
+</section>
+
+<!-- ═══ FEATURES ═══ -->
+<section class="section wrap" id="features">
+  <div class="section__head">
+    <p class="eyebrow">Under the hood</p>
+    <h2>Small file. Real paint.</h2>
+  </div>
+  <ul class="features">
+    <li class="paper-card">
+      <h3>One file, zero dependencies</h3>
+      <p>About 20&nbsp;KB gzipped without comments. A plain <code>&lt;script&gt;</code> tag is enough; it even works from a page opened off your disk. ES module and CommonJS entries included.</p>
+    </li>
+    <li class="paper-card">
+      <h3>Built from dabs, not shapes</h3>
+      <p>Every mark is hundreds of tiny procedural dabs stamped with ordinary alpha. Texture, colour variance and darker overlaps all come from the stacking, the way pigment builds up.</p>
+    </li>
+    <li class="paper-card">
+      <h3>Deterministic</h3>
+      <p>Same seed, same input, same pixels. That gives you undo, replay, re-rendering at a new size, and paintings you can share as a few kilobytes of numbers.</p>
+    </li>
+    <li class="paper-card">
+      <h3>Smooth on phones</h3>
+      <p>Finished strokes bake in time slices between frames, a per-frame budget sheds decoration before structure, and a bounded history keeps memory flat.</p>
+    </li>
+    <li class="paper-card">
+      <h3>Feels right in the hand</h3>
+      <p>A One-Euro filter removes jitter without lag, then spline smoothing and arc-length resampling keep strokes even at any speed or pixel density. Touch, mouse and pen.</p>
+    </li>
+    <li class="paper-card">
+      <h3>Paints your whole page</h3>
+      <p><code>paintPage()</code> is the drop-in that made a real club website finger-paintable: paint under your text or over everything, and it stays put on long, scrolling pages.</p>
+    </li>
+  </ul>
+</section>
+
+<!-- ═══ DEMOS ═══ -->
+<section class="section wrap" id="demos">
+  <div class="section__head">
+    <p class="eyebrow">Demos</p>
+    <h2>What can you make with it?</h2>
+    <p>Each demo is one short HTML file. Open it, then view the source.</p>
+  </div>
+  <div class="demos">
+    <a class="demo paper-card" href="demo/playground.html">
+      <img src="demo/assets/img/demo-playground.webp" alt="A canvas covered in colourful acrylic strokes" width="600" height="375" loading="lazy">
+      <h3>Playground</h3>
+      <p>The finger-painting toy: palettes, undo, replay, save as PNG, and share a painting as a link.</p>
+    </a>
+    <a class="demo paper-card" href="demo/highlights.html">
+      <img src="demo/assets/img/demo-highlights.webp" alt="An article with words highlighted by painted brush strokes" width="600" height="375" loading="lazy">
+      <h3>Brush highlights</h3>
+      <p>Highlight, underline and circle words with real brush strokes as they scroll into view.</p>
+    </a>
+    <a class="demo paper-card" href="demo/splats.html">
+      <img src="demo/assets/img/demo-splats.webp" alt="Buttons surrounded by paint splatters" width="600" height="375" loading="lazy">
+      <h3>Splat buttons</h3>
+      <p>Likes, clicks and success states that throw paint instead of confetti.</p>
+    </a>
+    <a class="demo paper-card" href="demo/generative.html">
+      <img src="demo/assets/img/demo-generative.webp" alt="An abstract painting generated from a word" width="600" height="375" loading="lazy">
+      <h3>Seeded paintings</h3>
+      <p>Type a word, get a painting. The same word always paints the same picture: covers, avatars, wallpapers.</p>
+    </a>
+    <a class="demo paper-card" href="demo/coloring.html">
+      <img src="demo/assets/img/demo-coloring.webp" alt="A line drawing of a flower being coloured in with paint" width="600" height="375" loading="lazy">
+      <h3>Coloring book</h3>
+      <p>Line art on top, paint underneath, big friendly colours. Made for small fingers.</p>
+    </a>
+    <a class="demo paper-card" href="demo/reveal.html">
+      <img src="demo/assets/img/demo-reveal.webp" alt="Paint strokes revealing a hidden message" width="600" height="375" loading="lazy">
+      <h3>Paint to reveal</h3>
+      <p>A scratch card where the paint is the mask: promo codes, surprises, quiz answers.</p>
+    </a>
+    <a class="demo paper-card" href="demo/drop-in.html">
+      <img src="demo/assets/img/demo-drop-in.webp" alt="An ordinary web page with paint blended over it" width="600" height="375" loading="lazy">
+      <h3>Drop-in for any page</h3>
+      <p>One call makes an existing page paintable, with no CSS changes: paint blended over everything.</p>
+    </a>
+    <a class="demo paper-card" href="demo/hero-only.html">
+      <img src="demo/assets/img/demo-hero-only.webp" alt="A web page whose hero section is painted on while the rest stays clean" width="600" height="375" loading="lazy">
+      <h3>Paint one section</h3>
+      <p>Only the hero is wet: paint stays inside one section, under its text, and the rest of the page stays clean.</p>
+    </a>
+  </div>
+</section>
+
+<!-- ═══ GET STARTED ═══ -->
+<section class="section wrap" id="start">
+  <div class="section__head">
+    <p class="eyebrow">Get started</p>
+    <h2>Three lines to start painting.</h2>
+    <p>Grab <a href="paint-engine.js" download>paint-engine.js</a> or load it from a CDN, then pick how you want to use it.</p>
+  </div>
+  <div class="start">
+    <div class="start__item">
+      <h3>A canvas you can paint on</h3>
+      <pre class="code"><code><span class="k">&lt;div</span> id=<span class="s">"art"</span> style=<span class="s">"height: 400px"</span><span class="k">&gt;&lt;/div&gt;</span>
+<span class="k">&lt;script</span> src=<span class="s">"https://cdn.jsdelivr.net/gh/alexandrewillame/paint-engine@v1.0.0/paint-engine.js"</span><span class="k">&gt;&lt;/script&gt;</span>
+<span class="k">&lt;script&gt;</span>
+  <span class="k">const</span> paint = PaintEngine.mount(<span class="s">'#art'</span>);
+  <span class="c">// paint.undo(), paint.clear(), paint.color = '#e5484d'</span>
+<span class="k">&lt;/script&gt;</span></code></pre>
+    </div>
+    <div class="start__item">
+      <h3>Let visitors paint your page</h3>
+      <pre class="code"><code><span class="c">// at the end of &lt;body&gt;</span>
+PaintEngine.paintPage({
+  palette: [<span class="s">'#EE4C9B'</span>, <span class="s">'#8B5FBF'</span>, <span class="s">'#F6A6C8'</span>],
+  layer: <span class="s">'under'</span>,   <span class="c">// or 'over': blended above everything</span>
+});</code></pre>
+    </div>
+    <div class="start__item">
+      <h3>Paint from code</h3>
+      <pre class="code"><code><span class="k">const</span> paint = PaintEngine.mount(<span class="s">'#art'</span>, { input: <span class="k">false</span> });
+<span class="k">await</span> PaintEngine.paintStroke(paint, [[<span class="k">40</span>, <span class="k">200</span>], [<span class="k">300</span>, <span class="k">120</span>], [<span class="k">560</span>, <span class="k">220</span>]], {
+  speed: <span class="k">700</span>, flick: <span class="k">true</span>, color: <span class="s">'#17A6B5'</span>, animate: <span class="k">true</span>,
+});
+paint.splat(<span class="k">480</span>, <span class="k">90</span>);</code></pre>
+    </div>
+  </div>
+  <p class="start__more">npm, ES modules, TypeScript types, the full API and recipes are in the <a href="https://github.com/alexandrewillame/paint-engine#readme">README</a>.</p>
+</section>
+
+<!-- ═══ IN THE WILD ═══ -->
+<section class="section wrap" id="wild">
+  <div class="wild paper-card">
+    <div class="wild__text">
+      <p class="eyebrow">In the wild</p>
+      <h2>Born on a club website.</h2>
+      <p>Paint Engine was built for <a href="https://creativebestiesclubmtl.com/" target="_blank" rel="noopener">Creative Besties Club MTL</a>, a Montréal club that brings women together through creative workshops and social events, from painting and clay to picnics. On their site every drag stains the page, every tap splatters, and you can even paint on the photos. It seemed a shame to keep it on one website.</p>
+      <p class="wild__links">
+        <a class="btn btn--line" href="https://creativebestiesclubmtl.com/" target="_blank" rel="noopener">Visit the site</a>
+        <a class="btn btn--line" href="https://creativebestiesclubmtl.com/canvas" target="_blank" rel="noopener">Their paint toy</a>
+      </p>
+      <p class="wild__fine">Screenshots from November 2026, in case the site has changed since. Members' photos blurred.</p>
+    </div>
+    <div class="wild__shots">
+      <img class="wild__desk" src="demo/assets/img/club-desktop.webp" alt="The Creative Besties Club MTL home page, with pink and purple paint strokes across it" width="1280" height="800" loading="lazy">
+      <img class="wild__phone" src="demo/assets/img/club-phone.webp" alt="The same site on a phone, painted with a finger" width="780" height="1688" loading="lazy">
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <p>Paint Engine is free and open source under the MIT license. Made by Alexandre Willame.<br>
+  <a href="https://github.com/alexandrewillame/paint-engine">Source on GitHub</a> · <a href="https://github.com/alexandrewillame/paint-engine/issues">Report a bug</a> · <a href="#top">Back to top</a></p>
+</footer>
+
+<script src="paint-engine.js"></script>
+<script src="demo/assets/home.js"></script>
+</body>
+</html>

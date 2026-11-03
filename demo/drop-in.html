@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Drop-in for any page · Paint Engine</title>
+<meta name="description" content="One call makes an existing page paintable, with no CSS changes.">
+<link rel="icon" href="assets/img/mark-64.png" type="image/png">
+<style>
+  /* An ordinary site that was never designed for paint: opaque cards, a photo-ish hero, a dark
+     footer. Only the floating panel at the bottom belongs to the demo. */
+  * { box-sizing: border-box; }
+  /* the one optional line besides paintPage(): on phones a sideways drag paints instead of being
+     the browser's (README, "Sideways strokes on phones") */
+  body { touch-action: pan-y pinch-zoom; }
+  body { margin: 0; font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #2b2d42; background: #f7f7f2; }
+  a { color: inherit; }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 18px clamp(16px, 4vw, 48px); background: #fff; border-bottom: 1px solid #e6e6df; position: sticky; top: 0; z-index: 5; }
+  .logo { font: 800 20px/1 Georgia, serif; letter-spacing: -.02em; }
+  .nav ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; font-weight: 600; font-size: 15px; }
+  @media (max-width: 600px) { .nav ul li:not(:last-child) { display: none; } }
+  .hero { margin: 0; min-height: 420px; display: grid; place-items: center; text-align: center; padding: 60px 20px;
+    background: radial-gradient(circle at 25% 30%, #f6bd60 0 18%, transparent 19%), radial-gradient(circle at 78% 64%, #84a59d 0 22%, transparent 23%), linear-gradient(135deg, #f28482, #f5cac3 60%, #f7ede2); }
+  .hero h1 { font: 800 clamp(40px, 7vw, 72px)/1 Georgia, serif; margin: 0 0 14px; color: #2b2d42; letter-spacing: -.03em; }
+  .hero p { margin: 0 0 24px; font-size: 19px; }
+  .cta { display: inline-block; padding: 14px 26px; border-radius: 10px; background: #2b2d42; color: #fff; text-decoration: none; font-weight: 700; }
+  .wrap { width: min(1080px, 100% - 32px); margin: 0 auto; }
+  h2 { font: 800 34px/1.1 Georgia, serif; margin: 64px 0 22px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 6px 24px -16px rgba(0, 0, 0, .35); }
+  .card .pic { height: 120px; border-radius: 10px; margin-bottom: 16px; }
+  .card h3 { margin: 0 0 6px; font-size: 20px; }
+  .card p { margin: 0; color: #5c5f73; font-size: 16px; }
+  blockquote { margin: 64px 0; padding: 30px; background: #edf2f4; border-radius: 14px; font: italic 22px/1.5 Georgia, serif; }
+  blockquote footer { font: 600 15px system-ui, sans-serif; margin-top: 10px; font-style: normal; }
+  .foot { background: #2b2d42; color: #d9dbe5; padding: 48px 20px 120px; text-align: center; font-size: 15px; }
+
+  /* the demo's own panel */
+  .panel { position: fixed; z-index: 2147483600; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; padding: 8px;
+    width: max-content; max-width: calc(100vw - 20px);
+    background: rgba(29, 25, 22, .92); color: #f4efe6; border-radius: 16px; box-shadow: 0 14px 30px -12px rgba(0, 0, 0, .5); font: 600 14px system-ui, sans-serif; }
+  .panel span { padding: 0 6px 0 8px; opacity: .75; }
+  .panel button { height: 36px; padding: 0 12px; border-radius: 10px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+  .panel button[aria-pressed="true"] { background: #f4efe6; color: #1d1916; }
+  .panel a { color: inherit; padding: 0 8px; }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <span class="logo">Riverside Pottery</span>
+  <ul><li><a href="#classes">Classes</a></li><li><a href="#about">About</a></li><li><a href="../">Back to Paint Engine</a></li></ul>
+</nav>
+<header class="hero">
+  <div>
+    <h1>Get your hands dirty.</h1>
+    <p>Wheel throwing, hand building and glazing nights by the river.</p>
+    <a class="cta" href="#classes">See the classes</a>
+  </div>
+</header>
+<main class="wrap">
+  <h2 id="classes">Classes this month</h2>
+  <div class="cards">
+    <article class="card"><div class="pic" style="background:linear-gradient(135deg,#84a59d,#cfe1b9)"></div><h3>First time on the wheel</h3><p>Two hours, one bowl, zero experience needed. Aprons provided.</p></article>
+    <article class="card"><div class="pic" style="background:linear-gradient(135deg,#f6bd60,#f28482)"></div><h3>Glaze night</h3><p>Paint the pieces you made last week. Snacks, music, kiln on Friday.</p></article>
+    <article class="card"><div class="pic" style="background:linear-gradient(135deg,#5e6472,#aed9e0)"></div><h3>Hand building</h3><p>Pinch pots, coils and slabs: no wheel, all imagination.</p></article>
+  </div>
+  <blockquote id="about">“I came for the mugs and stayed for the people. Also the mugs.”<footer>Sam, Tuesday regular</footer></blockquote>
+</main>
+<footer class="foot">Riverside Pottery is a made-up studio. This whole page became paintable with one line of JavaScript.</footer>
+
+<div class="panel" data-paint-engine-ignore>
+  <span>Drag anywhere to paint · layer:</span>
+  <button type="button" data-mode="over" aria-pressed="true">Over · multiply</button>
+  <button type="button" data-mode="over-normal" aria-pressed="false">Over · normal</button>
+  <button type="button" data-mode="under" aria-pressed="false">Under</button>
+  <button type="button" id="clear">Clear</button>
+</div>
+
+<script src="../paint-engine.js"></script>
+<script>
+// This is the whole integration:
+let page = PaintEngine.paintPage({ layer: 'over' });
+
+// The rest is the demo's panel: compare the layer modes. 'over' blends paint over everything, so
+// it works on any page. 'under' keeps your text on top, but only shows where the page's own
+// background does: on this page the cards, hero and footer paint solid backgrounds that hide it.
+const MODES = {
+  'over': { layer: 'over' },
+  'over-normal': { layer: 'over', blend: 'normal', opacity: 0.5 },
+  'under': { layer: 'under', opacity: 0.6 },
+};
+document.querySelectorAll('.panel [data-mode]').forEach((b) => b.addEventListener('click', () => {
+  page.destroy();
+  page = PaintEngine.paintPage(MODES[b.dataset.mode]);
+  document.querySelectorAll('.panel [data-mode]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+}));
+document.getElementById('clear').addEventListener('click', () => page.clear());
+</script>
+</body>
+</html>

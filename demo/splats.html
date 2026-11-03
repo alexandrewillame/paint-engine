@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Splat buttons · Paint Engine</title>
+<meta name="description" content="Likes, clicks and success states that throw paint instead of confetti.">
+<link rel="icon" href="assets/img/mark-64.png" type="image/png">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  main { width: min(1040px, 100% - 2 * var(--gutter)); margin: 8px auto 100px; }
+  .intro { max-width: 40em; margin: 18px 0 34px; }
+  .intro h1 { font-size: clamp(40px, 7vw, 64px); margin-bottom: 14px; }
+  .intro p { color: var(--ink-soft); font-size: 18px; margin: 0; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(14px, 2.4vw, 26px); }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .demo-card { padding: 26px; min-height: 280px; display: flex; flex-direction: column; }
+  .demo-card h2 { font-size: 26px; margin-bottom: 6px; }
+  .demo-card > p { color: var(--ink-soft); margin: 0 0 22px; font-size: 16px; }
+  .demo-card .stagefloor { flex: 1; display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+
+  /* like */
+  .like { display: inline-flex; align-items: center; gap: 10px; height: 56px; padding: 0 22px 0 18px; border-radius: 999px; border: 2px solid var(--ink); background: var(--card); font: 700 18px/1 var(--sans); cursor: pointer; color: var(--ink); }
+  .like svg { width: 26px; height: 26px; transition: transform .2s cubic-bezier(.3, 1.8, .5, 1); }
+  .like[aria-pressed="true"] { background: #fff0f5; border-color: #e01b62; color: #e01b62; }
+  .like[aria-pressed="true"] svg { transform: scale(1.18); }
+  .like[aria-pressed="true"] svg path { fill: #e01b62; }
+
+  /* subscribe */
+  form.sub { display: flex; gap: 8px; width: 100%; max-width: 420px; flex-wrap: wrap; justify-content: center; }
+  form.sub input { flex: 1 1 200px; min-width: 0; height: 52px; padding: 0 16px; border: 2px solid var(--ink); border-radius: 12px; font: 500 16px var(--sans); background: #fff; }
+  form.sub .btn { height: 52px; }
+  .thanks { font: 700 22px/1.2 var(--serif); margin: 0; display: none; }
+  .sent form.sub { display: none; }
+  .sent .thanks { display: block; }
+
+  /* paintball */
+  .range { position: relative; width: min(100%, 300px); aspect-ratio: 1; border-radius: 50%; touch-action: manipulation; cursor: crosshair; -webkit-user-select: none; user-select: none; }
+  .target { position: absolute; inset: 0; border-radius: 50%; background: repeating-radial-gradient(circle, #fbf8f2 0 9.5%, #1d1916 9.5% 10%, #fbf8f2 10% 19.5%, #e9dfcf 19.5% 20%); border: 2px solid var(--ink); }
+  .target::after { content: ""; position: absolute; left: 45%; top: 45%; width: 10%; height: 10%; border-radius: 50%; background: var(--red); }
+  .range .hits { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; pointer-events: none; }
+  .score { font: 700 18px/1 var(--sans); min-width: 7.5em; text-align: center; }
+  .pop { position: absolute; font: 800 18px/1 var(--sans); color: var(--ink); pointer-events: none; animation: pop .9s ease-out forwards; }
+  @keyframes pop { from { opacity: 1; transform: translate(-50%, -50%); } to { opacity: 0; transform: translate(-50%, -160%); } }
+
+  /* trail */
+  #trail { position: fixed; inset: 0; z-index: 25; pointer-events: none; transition: opacity .6s ease; }
+  #trail.fading { opacity: 0; }
+  .switch { display: inline-flex; align-items: center; gap: 12px; font: 600 17px var(--sans); cursor: pointer; }
+  .switch input { width: 46px; height: 28px; appearance: none; -webkit-appearance: none; border-radius: 999px; background: var(--line); position: relative; cursor: pointer; transition: background .2s; margin: 0; }
+  .switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: transform .2s; }
+  .switch input:checked { background: var(--teal); }
+  .switch input:checked::after { transform: translateX(18px); }
+  .touch-note { display: none; color: var(--muted); font-size: 15px; }
+  @media (hover: none) { .touch-note { display: block; } .hover-only { display: none; } }
+
+  .tools { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
+</style>
+</head>
+<body>
+<header class="demo-bar demo-bar--static">
+  <a class="chip" href="../"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m6-6-6 6 6 6"/></svg>Paint Engine</a>
+  <span class="chip chip--title">Splat buttons</span>
+  <span class="spacer"></span>
+  <a class="chip" href="https://github.com/alexandrewillame/paint-engine/blob/main/demo/splats.html">Source</a>
+</header>
+
+<main>
+  <div class="intro">
+    <h1>Throw paint, not confetti.</h1>
+    <p>Small moments in an interface, answered with a splat. The stains stay on the page where they landed (it's <code>paintPage()</code> with input turned off, painted from code), until you wash them off.</p>
+  </div>
+
+  <div class="grid">
+    <section class="demo-card paper-card">
+      <h2>Like</h2>
+      <p>A tap leaves a splat behind the button. Tap again to unlike; the paint stays, like it would.</p>
+      <div class="stagefloor">
+        <button class="like" id="like" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.6 3.9 4.5 7.2 4.5c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.3 0 5.6 3.1 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z"/></svg><span id="likes">128</span></button>
+      </div>
+    </section>
+
+    <section class="demo-card paper-card" id="subCard">
+      <h2>Success</h2>
+      <p>A form that celebrates: flicked strokes thrown out from the button, then splats. (Nothing is sent anywhere.)</p>
+      <div class="stagefloor">
+        <form class="sub" id="sub">
+          <label class="sr" for="email">Email</label>
+          <input id="email" type="email" placeholder="you@example.com" autocomplete="off">
+          <button class="btn btn--ink" type="submit" id="subBtn">Subscribe</button>
+        </form>
+        <p class="thanks">You're in. <button class="linkish" type="button" id="subReset">Again?</button></p>
+      </div>
+    </section>
+
+    <section class="demo-card paper-card">
+      <h2>Paintball</h2>
+      <p>Every hit leaves its mark. Closer to the middle scores more.</p>
+      <div class="stagefloor">
+        <div class="range" id="range"><div class="target"></div><div class="hits" id="hits"></div></div>
+        <div class="score" id="score">Score: 0</div>
+      </div>
+    </section>
+
+    <section class="demo-card paper-card">
+      <h2>Paint trail</h2>
+      <p>The pointer leaves a thin trail of paint that dries off when you stop. Nice behind a portfolio.</p>
+      <div class="stagefloor">
+        <label class="switch hover-only"><input type="checkbox" id="trailOn"> Paint where the mouse goes</label>
+        <p class="touch-note">This one needs a mouse or trackpad.</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="tools">
+    <button class="btn btn--line" type="button" id="wash">Wash the page</button>
+  </div>
+</main>
+
+<div id="trail" aria-hidden="true"></div>
+
+<script src="../paint-engine.js"></script>
+<script>
+'use strict';
+const COLORS = ['#EE4C9B', '#E01B62', '#F7941E', '#17A6B5', '#3B12E8', '#29ABE2', '#F04E23'];
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
+
+// Stains anchored to the page, painted only from code (no mouse/touch painting on this demo).
+const page = PaintEngine.paintPage({ layer: 'under', opacity: 0.9, mouse: false, touch: false });
+const centerOf = (el) => {
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2 + scrollX, y: r.top + r.height / 2 + scrollY, w: r.width, h: r.height };
+};
+
+// ── like ──
+const like = document.getElementById('like'), likes = document.getElementById('likes');
+like.addEventListener('click', () => {
+  const on = like.getAttribute('aria-pressed') !== 'true';
+  like.setAttribute('aria-pressed', String(on));
+  likes.textContent = String(+likes.textContent + (on ? 1 : -1));
+  if (!on) return;
+  const c = centerOf(like);
+  // off the button's corner, so the splat isn't hidden behind it
+  page.splat(c.x + c.w * (0.25 + Math.random() * 0.2), c.y - c.h * (0.3 + Math.random() * 0.3), { color: pick(['#EE4C9B', '#E01B62', '#F6A6C8']), size: 34 });
+});
+
+// ── success ──
+const subCard = document.getElementById('subCard');
+document.getElementById('sub').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const c = centerOf(document.getElementById('subBtn'));
+  // strokes thrown outward from the button, each flicked off at its outer end
+  const n = 7, a0 = Math.random() * Math.PI;
+  for (let i = 0; i < n; i++) {
+    const a = a0 + (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+    const r0 = 64 + Math.random() * 20, r1 = r0 + 120 + Math.random() * 60, bend = (Math.random() - 0.5) * 0.5;
+    const pts = [];
+    for (let k = 0; k <= 12; k++) {
+      const t = k / 12, rr = r0 + (r1 - r0) * t, aa = a + bend * t * t;
+      pts.push([c.x + Math.cos(aa) * rr, c.y + Math.sin(aa) * rr * 0.75]);
+    }
+    page.stroke(pts, { speed: 520, flick: true, color: COLORS[i % COLORS.length] });
+  }
+  for (let i = 0; i < 3; i++) {
+    const a = Math.random() * Math.PI * 2;
+    page.splat(c.x + Math.cos(a) * 150, c.y + Math.sin(a) * 90, { color: pick(COLORS), size: 14 + Math.random() * 14 });
+  }
+  subCard.classList.add('sent');
+});
+document.getElementById('subReset').addEventListener('click', () => {
+  subCard.classList.remove('sent');
+  document.getElementById('email').value = '';
+});
+
+// ── paintball: its own little engine over the target, so hits stay on it ──
+const range = document.getElementById('range');
+const hits = PaintEngine.mount(document.getElementById('hits'), { input: false, paper: false });
+let score = 0;
+range.addEventListener('pointerdown', (e) => {
+  const r = range.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  const d = Math.hypot(x - r.width / 2, y - r.height / 2) / (r.width / 2);
+  if (d > 1) return;
+  hits.splat(x, y, { color: pick(COLORS), size: 10 + Math.random() * 8 });
+  const pts = d < 0.1 ? 100 : d < 0.3 ? 50 : d < 0.6 ? 20 : 5;
+  score += pts;
+  document.getElementById('score').textContent = 'Score: ' + score;
+  const pop = document.createElement('span');
+  pop.className = 'pop';
+  pop.textContent = '+' + pts;
+  pop.style.left = x + 'px'; pop.style.top = y + 'px';
+  range.appendChild(pop);
+  setTimeout(() => pop.remove(), 950);
+});
+
+// ── paint trail: a fixed overlay with its own engine, fed straight from mousemove ──
+const trailEl = document.getElementById('trail');
+let trail = null, trailLive = false, trailTravel = 0, lastX = 0, lastY = 0, idleTimer = 0, endTimer = 0, colorIndex = 0;
+function trailMove(e) {
+  if (e.buttons) return;
+  if (!trail) trail = PaintEngine.mount(trailEl, { input: false, paper: false, scale: 0.4 });
+  trailEl.classList.remove('fading');
+  if (!trailLive) {
+    trail.beginStroke(e.clientX, e.clientY, e.timeStamp, { color: COLORS[colorIndex++ % COLORS.length] });
+    trailLive = true; trailTravel = 0;
+  } else {
+    trail.extendStroke(e.clientX, e.clientY, e.timeStamp);
+    trailTravel += Math.hypot(e.clientX - lastX, e.clientY - lastY);
+  }
+  lastX = e.clientX; lastY = e.clientY;
+  // a stroke ends when the pointer rests, or after a stretch of travel (a new dip of the brush)
+  clearTimeout(endTimer);
+  endTimer = setTimeout(endTrail, 90);
+  if (trailTravel > 420) endTrail(e.timeStamp);
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    trailEl.classList.add('fading');
+    setTimeout(() => { if (trailEl.classList.contains('fading') && trail) trail.clear(); }, 650);
+  }, 1400);
+}
+function endTrail(t) {
+  if (!trailLive) return;
+  trail.endStroke(typeof t === 'number' ? t : performance.now());
+  trailLive = false;
+}
+document.getElementById('trailOn').addEventListener('change', (e) => {
+  if (e.target.checked) window.addEventListener('mousemove', trailMove);
+  else { window.removeEventListener('mousemove', trailMove); endTrail(); if (trail) trail.clear(); }
+});
+
+document.getElementById('wash').addEventListener('click', () => {
+  page.layer.style.transition = 'opacity .5s ease';
+  page.layer.style.opacity = '0';
+  setTimeout(() => { page.clear(); page.layer.style.opacity = '0.9'; }, 520);
+  hits.clear();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Paint to reveal · Paint Engine</title>
+<meta name="description" content="A scratch card where the paint is the mask.">
+<link rel="icon" href="assets/img/mark-64.png" type="image/png">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  main { width: min(760px, 100% - 2 * var(--gutter)); margin: 8px auto 80px; text-align: center; }
+  h1 { font-size: clamp(38px, 7vw, 60px); margin: 18px 0 10px; }
+  .sub { color: var(--ink-soft); font-size: 18px; margin: 0 auto 26px; max-width: 34em; }
+  .card {
+    position: relative; width: 100%; aspect-ratio: 3 / 2;
+    border-radius: 18px; overflow: hidden;
+    box-shadow: 0 0 0 1px var(--line), 0 26px 50px -30px rgba(60, 40, 20, .75);
+    touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    cursor: crosshair;
+  }
+  #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+  /* the engine's own canvas only takes the input; what you see is #view, composited from it */
+  #input { position: absolute; inset: 0; opacity: 0; }
+  .meter { display: flex; align-items: center; gap: 12px; justify-content: center; margin: 18px 0 0; font: 600 15px var(--sans); color: var(--ink-soft); }
+  .bar { width: 200px; height: 10px; border-radius: 999px; background: var(--paper-deep); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--teal); transition: width .3s ease; }
+  .again { margin-top: 18px; }
+  .card.done #view { transition: none; }
+</style>
+</head>
+<body>
+<header class="demo-bar demo-bar--static">
+  <a class="chip" href="../"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m6-6-6 6 6 6"/></svg>Paint Engine</a>
+  <span class="chip chip--title">Paint to reveal</span>
+  <span class="spacer"></span>
+  <a class="chip" href="https://github.com/alexandrewillame/paint-engine/blob/main/demo/reveal.html">Source</a>
+</header>
+
+<main>
+  <h1>Paint to reveal.</h1>
+  <p class="sub">A scratch card where the paint is the mask: every streak, droplet and frayed edge lets a little more of the prize through.</p>
+  <div class="card" id="card">
+    <canvas id="view"></canvas>
+    <div id="input"></div>
+  </div>
+  <div class="meter"><span id="pct">0% revealed</span><span class="bar"><i id="bar"></i></span></div>
+  <button class="btn btn--line again" type="button" id="again">New card</button>
+</main>
+
+<script src="../paint-engine.js"></script>
+<script>
+'use strict';
+const card = document.getElementById('card');
+const view = document.getElementById('view');
+const vg = view.getContext('2d');
+const paint = PaintEngine.mount('#input', { paper: false, color: '#000' });
+
+// The two faces, drawn once per size: the cover you paint on, and the prize under it.
+let cover = null, prize = null, maskCanvas = null;
+function faces(w, h) {
+  const dpr = w / card.clientWidth;
+  const mk = () => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+  cover = mk(); prize = mk(); maskCanvas = mk();
+  let g = cover.getContext('2d');
+  g.fillStyle = '#e9e0d0';
+  g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(29, 25, 22, .06)';
+  for (let y = 0; y < h; y += 18 * dpr) for (let x = (y / (18 * dpr)) % 2 ? 9 * dpr : 0; x < w; x += 18 * dpr) g.fillRect(x, y, 3 * dpr, 3 * dpr);
+  g.fillStyle = '#7b7064';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = '700 ' + Math.round(h * 0.13) + 'px "Iowan Old Style", "Palatino Linotype", Georgia, serif';
+  g.fillText('Paint here', w / 2, h * 0.46);
+  g.font = '600 ' + Math.round(h * 0.05) + 'px system-ui, sans-serif';
+  g.fillText('drag, flick, tap: anything goes', w / 2, h * 0.62);
+
+  g = prize.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, w, h);
+  grad.addColorStop(0, '#17A6B5'); grad.addColorStop(0.55, '#3B5BA5'); grad.addColorStop(1, '#3B12E8');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(255,255,255,.08)';
+  for (let i = 0; i < 9; i++) { g.beginPath(); g.arc(w * (i / 8), h * (0.15 + (i % 3) * 0.35), h * (0.18 + (i % 4) * 0.05), 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = '#fff';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = '800 ' + Math.round(h * 0.075) + 'px system-ui, sans-serif';
+  g.fillText('YOU FOUND IT', w / 2, h * 0.27);
+  g.font = '700 ' + Math.round(h * 0.26) + 'px "Iowan Old Style", "Palatino Linotype", Georgia, serif';
+  g.fillText('20% off', w / 2, h * 0.5);
+  g.font = '700 ' + Math.round(h * 0.07) + 'px ui-monospace, Consolas, monospace';
+  g.fillText('code: PAINT20', w / 2, h * 0.73);
+  g.font = '500 ' + Math.round(h * 0.04) + 'px system-ui, sans-serif';
+  g.globalAlpha = 0.75;
+  g.fillText('(not a real code)', w / 2, h * 0.85);
+}
+
+// Composite: the prize, kept only where there is paint, over the cover. The engine's canvas is
+// drawn twice into the mask so a stroke's core reveals fully while its frayed edges stay partial.
+let revealed = 0, done = false;
+function composite() {
+  const src = paint.canvas;
+  if (!src.width) return;
+  if (!cover || cover.width !== src.width || cover.height !== src.height) {
+    view.width = src.width; view.height = src.height;
+    faces(src.width, src.height);
+  }
+  const mg = maskCanvas.getContext('2d');
+  mg.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+  mg.drawImage(src, 0, 0);
+  mg.drawImage(src, 0, 0);
+  vg.globalCompositeOperation = 'source-over';
+  vg.globalAlpha = 1;
+  vg.clearRect(0, 0, view.width, view.height);
+  vg.drawImage(prize, 0, 0);
+  vg.globalCompositeOperation = 'destination-in';
+  vg.drawImage(maskCanvas, 0, 0);
+  vg.globalCompositeOperation = 'destination-over';
+  vg.globalAlpha = done ? Math.max(0, 1 - (performance.now() - doneAt) / 700) : 1;
+  vg.drawImage(cover, 0, 0);
+}
+
+// How much is showing: the mask, shrunk to 64 px across, counted
+const probe = document.createElement('canvas');
+probe.width = 64; probe.height = 43;
+const pg = probe.getContext('2d', { willReadFrequently: true });
+function measure() {
+  pg.clearRect(0, 0, 64, 43);
+  pg.drawImage(maskCanvas, 0, 0, 64, 43);
+  const d = pg.getImageData(0, 0, 64, 43).data;
+  let on = 0;
+  for (let i = 3; i < d.length; i += 4) if (d[i] > 110) on++;
+  return on / (64 * 43);
+}
+
+// Composite only while something can change: during a gesture, for a moment after (a finished
+// stroke bakes over a few frames), and while the cover fades.
+let doneAt = 0, lastMeasure = 0, awakeUntil = 0, running = false;
+function frame(now) {
+  composite();
+  if (!done && now - lastMeasure > 250 && maskCanvas) {
+    lastMeasure = now;
+    revealed = measure();
+    const pct = Math.min(100, Math.round(revealed / 0.6 * 100));
+    document.getElementById('pct').textContent = pct + '% revealed';
+    document.getElementById('bar').style.width = pct + '%';
+    if (revealed >= 0.6) { done = true; doneAt = now; awakeUntil = now + 800; card.classList.add('done'); }
+  }
+  if (now < awakeUntil || paint.drawing) requestAnimationFrame(frame);
+  else running = false;
+}
+function wake(ms) {
+  awakeUntil = Math.max(awakeUntil, performance.now() + ms);
+  if (!running) { running = true; requestAnimationFrame(frame); }
+}
+const input = paint.canvas;
+['pointerdown', 'pointermove', 'pointerup'].forEach((t) => input.addEventListener(t, () => wake(1200)));
+new ResizeObserver(() => wake(300)).observe(card);
+wake(300);
+
+document.getElementById('again').addEventListener('click', () => {
+  paint.clear();
+  done = false; revealed = 0;
+  card.classList.remove('done');
+  document.getElementById('pct').textContent = '0% revealed';
+  document.getElementById('bar').style.width = '0';
+  wake(300);
+});
+</script>
+</body>
+</html>

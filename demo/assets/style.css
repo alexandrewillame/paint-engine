@@ -1,0 +1,225 @@
+/* Paint Engine — site and demo styles. Plain CSS, system fonts, no third-party requests. */
+
+:root {
+  color-scheme: light;
+  --paper: #f4efe6;          /* the engine's own paper colour */
+  --paper-deep: #ebe3d4;
+  --card: #fbf8f2;
+  --ink: #1d1916;
+  --ink-soft: #4b433c;
+  --muted: #7b7064;
+  --line: #d8cdbb;
+  --teal: #17a6b5;
+  --sky: #29abe2;
+  --indigo: #3b5ba5;
+  --ultra: #3b12e8;
+  --orange: #f7941e;
+  --red: #f04e23;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", "URW Palladio L", Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --radius: 14px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --max: 1120px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* Paper with a faint grain (an SVG noise tile, rasterised once and repeated).
+   touch-action: on a phone a sideways drag is a paint stroke, not a pan or the browser's swipe-back;
+   vertical scrolling and pinch-zoom stay the browser's. */
+body {
+  touch-action: pan-y pinch-zoom;
+  margin: 0;
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .25 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+a { color: inherit; }
+img { max-width: 100%; height: auto; display: block; }
+code, kbd, pre { font-family: var(--mono); font-size: 0.9em; }
+:focus-visible { outline: 3px solid var(--ultra); outline-offset: 3px; border-radius: 4px; }
+
+.wrap { width: min(var(--max), 100% - 2 * var(--gutter)); margin-inline: auto; }
+
+/* ── buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: .5em;
+  padding: .8em 1.25em;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+  font: 600 16px/1.1 var(--sans);
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.btn--ink { background: var(--ink); color: var(--paper); box-shadow: 0 6px 0 -2px rgba(29, 25, 22, .25); }
+.btn--line { background: var(--card); color: var(--ink); }
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(1px); box-shadow: none; }
+.btn svg { width: 18px; height: 18px; flex: none; }
+
+/* ── top bar (site) ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 18px var(--gutter);
+  max-width: calc(var(--max) + 2 * var(--gutter));
+  margin-inline: auto;
+}
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font: 700 19px/1 var(--serif); letter-spacing: -.01em; }
+.brand img, .brand svg { width: 30px; height: 30px; }
+.topbar__nav { display: flex; align-items: center; gap: clamp(12px, 3vw, 28px); font-size: 15px; font-weight: 600; }
+.topbar__nav a { text-decoration: none; color: var(--ink-soft); }
+.topbar__nav a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.topbar__nav .gh { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
+.topbar__nav .gh svg { width: 18px; height: 18px; }
+@media (max-width: 520px) { .topbar__nav .hide-sm { display: none; } }
+
+/* ── type ── */
+h1, h2, h3 { font-family: var(--serif); font-weight: 700; letter-spacing: -.02em; line-height: 1.05; margin: 0; }
+h2 { font-size: clamp(32px, 5vw, 52px); }
+h3 { font-size: 22px; letter-spacing: -.01em; line-height: 1.2; }
+.eyebrow { font: 700 13px/1.2 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+.lede { font-size: clamp(18px, 2.2vw, 21px); color: var(--ink-soft); max-width: 40em; }
+
+/* ── the caution sign ── */
+.sign {
+  display: inline-flex; align-items: center; gap: .55em;
+  padding: .45em .9em .45em .7em;
+  background: #ffd23f;
+  color: #1d1916;
+  border: 2px solid #1d1916;
+  border-radius: 6px;
+  font: 800 13px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase;
+  box-shadow: 3px 3px 0 #1d1916;
+}
+.sign svg { width: 16px; height: 16px; }
+
+/* ── sections ── */
+.section { padding-block: clamp(56px, 9vw, 110px); }
+.section__head { max-width: 46em; margin-bottom: clamp(28px, 4vw, 44px); }
+.section__head p { color: var(--ink-soft); font-size: 18px; margin: 14px 0 0; }
+
+/* Paper that lies ON the page but still takes paint (paintPage's 'under' layer): the card paints
+   no background of its own; its paper is a ::before at z-index:-2, below the paint layer (-1),
+   while its text stays above. Nothing between it and the root may form a stacking context. */
+.paper-card { position: relative; border-radius: var(--radius); }
+.paper-card::before {
+  content: ""; position: absolute; inset: 0; z-index: -2;
+  border-radius: inherit;
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 12px 30px -18px rgba(60, 40, 20, .35);
+}
+
+/* ── code ── */
+pre.code {
+  margin: 0;
+  padding: 18px 20px;
+  overflow-x: auto;
+  background: #211d1a;
+  color: #f1e9dc;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  tab-size: 2;
+}
+pre.code .c { color: #9b8f80; }
+pre.code .s { color: #ffc56b; }
+pre.code .k { color: #7fd1da; }
+:not(pre) > code { background: rgba(29, 25, 22, .07); padding: .1em .35em; border-radius: 5px; }
+
+/* ── footer ── */
+.foot { padding: 40px var(--gutter) 56px; color: var(--muted); font-size: 15px; text-align: center; }
+.foot a { color: var(--ink-soft); }
+
+/* ══════════ DEMO PAGES ══════════ */
+
+.demo-bar {
+  position: fixed; z-index: 20; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
+  pointer-events: none;
+}
+.demo-bar > * { pointer-events: auto; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(251, 248, 242, .92);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 18px -10px rgba(60, 40, 20, .45);
+  color: var(--ink);
+  font: 600 14px/1 var(--sans);
+  text-decoration: none;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.chip svg { width: 16px; height: 16px; }
+.chip--title { font-family: var(--serif); font-size: 16px; font-weight: 700; }
+.demo-bar .spacer { flex: 1; }
+
+/* Demo pages that scroll like documents use a normal (non-fixed) bar */
+.demo-bar--static { position: static; padding-top: 16px; }
+
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px;
+  border-radius: 20px;
+  background: rgba(251, 248, 242, .94);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 30px -14px rgba(60, 40, 20, .5);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.tool {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-width: 42px; height: 42px; padding: 0 12px;
+  border: 0; border-radius: 12px;
+  background: transparent; color: var(--ink);
+  font: 600 14px/1 var(--sans);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tool:hover { background: rgba(29, 25, 22, .06); }
+.tool:active { background: rgba(29, 25, 22, .12); }
+.tool[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.tool:disabled { opacity: .35; cursor: default; }
+.tool svg { width: 20px; height: 20px; flex: none; }
+.tool .label { display: inline; }
+@media (max-width: 560px) { .tool .label { display: none; } .sep { display: none; } }
+.sep { width: 1px; height: 26px; background: var(--line); margin: 0 2px; }
+
+.swatch-btn {
+  width: 30px; height: 30px; flex: none;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .9);
+  box-shadow: 0 0 0 1px var(--line);
+  cursor: pointer; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.swatch-btn[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); transform: scale(1.12); }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 40;
+  transform: translate(-50%, 12px);
+  padding: 10px 16px; border-radius: 999px;
+  background: var(--ink); color: var(--paper);
+  font: 600 14px/1.2 var(--sans);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  max-width: calc(100vw - 32px); text-align: center;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.linkish { background: none; border: 0; padding: 0; font: inherit; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

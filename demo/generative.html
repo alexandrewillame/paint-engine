@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seeded paintings · Paint Engine</title>
+<meta name="description" content="Type a word, get a painting. The same word always paints the same picture.">
+<link rel="icon" href="assets/img/mark-64.png" type="image/png">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  main { width: min(1100px, 100% - 2 * var(--gutter)); margin: 8px auto 90px; }
+  .intro { max-width: 42em; margin: 18px 0 26px; }
+  .intro h1 { font-size: clamp(40px, 7vw, 64px); margin-bottom: 14px; }
+  .intro p { color: var(--ink-soft); font-size: 18px; margin: 0; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+  .controls input[type="text"] { flex: 1 1 220px; min-width: 0; height: 48px; padding: 0 16px; border: 2px solid var(--ink); border-radius: 12px; font: 600 18px var(--serif); background: #fff; }
+  .controls select { height: 48px; padding: 0 12px; border: 2px solid var(--ink); border-radius: 12px; font: 600 15px var(--sans); background: var(--card); }
+  .controls .btn { height: 48px; }
+  .canvas-frame { padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 20px 40px -26px rgba(60, 40, 20, .6); }
+  #art { aspect-ratio: 16 / 10; border-radius: 8px; overflow: hidden; }
+  .caption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 15px; margin: 12px 4px 0; }
+  .caption b { color: var(--ink); font-family: var(--serif); font-size: 17px; }
+  h2 { font-size: clamp(28px, 4vw, 38px); margin: 64px 0 8px; }
+  .sub { color: var(--ink-soft); margin: 0 0 22px; }
+  .avatars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+  @media (max-width: 760px) { .avatars { grid-template-columns: repeat(3, 1fr); } }
+  .avatar { text-align: center; margin: 0; }
+  .avatar .face { aspect-ratio: 1; border-radius: 50%; overflow: hidden; border: 3px solid var(--card); box-shadow: 0 0 0 1px var(--line), 0 10px 20px -12px rgba(60, 40, 20, .6); }
+  .avatar figcaption { margin-top: 8px; font: 600 15px var(--sans); }
+  .covers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 760px) { .covers { grid-template-columns: 1fr; } }
+  .cover { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .cover .img { aspect-ratio: 2 / 1; }
+  .cover figcaption { padding: 14px 16px 16px; }
+  .cover figcaption b { display: block; font: 700 19px/1.25 var(--serif); }
+  .cover figcaption span { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<header class="demo-bar demo-bar--static">
+  <a class="chip" href="../"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m6-6-6 6 6 6"/></svg>Paint Engine</a>
+  <span class="chip chip--title">Seeded paintings</span>
+  <span class="spacer"></span>
+  <a class="chip" href="https://github.com/alexandrewillame/paint-engine/blob/main/demo/generative.html">Source</a>
+</header>
+
+<main>
+  <div class="intro">
+    <h1>Type a word, get a painting.</h1>
+    <p>Every random choice the engine makes comes from a seed. Seed it with a word and you get a painting only that word makes, the same one every time, on every device. Use it for covers, avatars, placeholders or wallpapers.</p>
+  </div>
+
+  <form class="controls" id="form">
+    <label class="sr" for="seed">Seed word</label>
+    <input id="seed" type="text" value="hello world" autocomplete="off" spellcheck="false" maxlength="60">
+    <label class="sr" for="style">Style</label>
+    <select id="style">
+      <option value="swash">Swash</option>
+      <option value="bloom">Bloom</option>
+      <option value="weave">Weave</option>
+      <option value="confetti">Confetti</option>
+    </select>
+    <button class="btn btn--ink" type="submit">Paint it</button>
+    <button class="btn btn--line" type="button" id="surprise">Surprise me</button>
+    <button class="btn btn--line" type="button" id="download">Download 1920×1200</button>
+  </form>
+
+  <div class="canvas-frame"><div id="art"></div></div>
+  <p class="caption"><span>Seed <b id="seedLabel">hello world</b></span><span>Paint the same word again: same picture.</span></p>
+
+  <h2>Avatars from names</h2>
+  <p class="sub">A painted placeholder for every user, from their name alone. Nothing stored, nothing to download.</p>
+  <div class="avatars" id="avatars"></div>
+
+  <h2>Covers from titles</h2>
+  <p class="sub">A header image for every post, from its title.</p>
+  <div class="covers" id="covers"></div>
+</main>
+
+<script src="../paint-engine.js"></script>
+<script>
+'use strict';
+const PALETTES = [
+  ['#17A6B5', '#29ABE2', '#3B5BA5', '#3B12E8', '#F7941E', '#F04E23'],
+  ['#EE4C9B', '#E01B62', '#8B5FBF', '#B892D8', '#F6A6C8'],
+  ['#FF5E5B', '#FF9F1C', '#FFCF56', '#D7263D', '#6A2C70'],
+  ['#2D6A4F', '#40916C', '#95D5B2', '#E9C46A', '#E76F51'],
+  ['#264653', '#2A9D8F', '#E9C46A', '#F4A261', '#E76F51'],
+  ['#1D1916', '#C1121F', '#FDF0D5', '#669BBC', '#003049'],
+];
+
+// One painting as a list of marks, from a seed alone. Coordinates are fractions of the canvas, so
+// the same composition paints at any size. `rng` is the engine's own PRNG, seeded by the word.
+function compose(word, style) {
+  const rng = PaintEngine.makeRNG(style + ':' + word);
+  const r = (a, b) => a + (b - a) * rng();
+  const palette = PALETTES[Math.floor(rng() * PALETTES.length)];
+  const color = () => palette[Math.floor(rng() * palette.length)];
+  const marks = [];
+  const curve = (p0, p1, p2, p3, n = 36) => {
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, u = 1 - t;
+      pts.push([0, 1].map((k) => u * u * u * p0[k] + 3 * u * u * t * p1[k] + 3 * u * t * t * p2[k] + t * t * t * p3[k]));
+    }
+    return pts;
+  };
+  if (style === 'swash') {
+    const n = Math.floor(r(5, 9));
+    for (let i = 0; i < n; i++) {
+      const y0 = r(0.1, 0.9), y1 = r(0.1, 0.9);
+      const fromLeft = rng() < 0.5;
+      const p0 = [fromLeft ? r(-0.05, 0.2) : r(0.8, 1.05), y0], p3 = [fromLeft ? r(0.7, 1.05) : r(-0.05, 0.3), y1];
+      marks.push({ pts: curve(p0, [r(0.2, 0.8), r(-0.2, 1.2)], [r(0.2, 0.8), r(-0.2, 1.2)], p3), speed: r(300, 900), flick: rng() < 0.5, color: color(), seed: Math.floor(rng() * 1e9) });
+    }
+    for (let i = 0, k = Math.floor(r(1, 4)); i < k; i++) marks.push({ splat: [r(0.1, 0.9), r(0.1, 0.9)], size: r(0.7, 1.3), color: color(), seed: Math.floor(rng() * 1e9) });
+  } else if (style === 'bloom') {
+    const cx = r(0.4, 0.6), cy = r(0.4, 0.6), n = Math.floor(r(9, 15)), a0 = rng() * Math.PI * 2, twist = r(-0.9, 0.9);
+    for (let i = 0; i < n; i++) {
+      const a = a0 + (i / n) * Math.PI * 2 + r(-0.15, 0.15), len = r(0.25, 0.42);
+      const at = (d, bend) => [cx + Math.cos(a + bend) * d * 0.62, cy + Math.sin(a + bend) * d];
+      marks.push({ pts: curve(at(0.04, 0), at(len * 0.4, twist * 0.2), at(len * 0.75, twist * 0.5), at(len, twist * 0.7)), speed: r(450, 800), flick: true, color: color(), seed: Math.floor(rng() * 1e9) });
+    }
+    marks.push({ splat: [cx, cy], size: r(1.1, 1.5), color: color(), seed: Math.floor(rng() * 1e9) });
+  } else if (style === 'weave') {
+    const rows = Math.floor(r(3, 6)), cols = Math.floor(r(3, 7));
+    for (let i = 0; i < rows; i++) {
+      const y = (i + 0.5) / rows + r(-0.03, 0.03);
+      marks.push({ pts: curve([-0.04, y], [0.33, y + r(-0.06, 0.06)], [0.66, y + r(-0.06, 0.06)], [1.04, y + r(-0.03, 0.03)]), speed: r(500, 1000), color: color(), seed: Math.floor(rng() * 1e9) });
+    }
+    for (let i = 0; i < cols; i++) {
+      const x = (i + 0.5) / cols + r(-0.03, 0.03);
+      marks.push({ pts: curve([x, -0.04], [x + r(-0.05, 0.05), 0.33], [x + r(-0.05, 0.05), 0.66], [x + r(-0.03, 0.03), 1.04]), speed: r(500, 1000), color: color(), seed: Math.floor(rng() * 1e9) });
+    }
+  } else { // confetti: dashes and taps
+    const n = Math.floor(r(26, 40));
+    for (let i = 0; i < n; i++) {
+      const x = r(0.05, 0.95), y = r(0.05, 0.95);
+      if (rng() < 0.35) marks.push({ splat: [x, y], size: r(0.3, 0.75), color: color(), seed: Math.floor(rng() * 1e9) });
+      else { const a = rng() * Math.PI * 2, l = r(0.02, 0.07); marks.push({ pts: [[x, y], [x + Math.cos(a) * l, y + Math.sin(a) * l]], speed: r(200, 700), color: color(), seed: Math.floor(rng() * 1e9) }); }
+    }
+  }
+  return { marks, engineSeed: Math.floor(rng() * 2 ** 31) };
+}
+
+// Paint a composition into an engine of size w x h. The brush (the engine's `scale`) grows with the
+// canvas while speeds stay as they are, so every stroke keeps its character: the same painting at
+// any size. `alive` lets a newer painting stop an older one between marks.
+const scaleFor = (w, h) => Math.min(w, h) / 600;
+async function paintInto(engine, w, h, comp, animate, alive = () => true) {
+  const scale = scaleFor(w, h);
+  for (const m of comp.marks) {
+    if (!alive()) return;
+    // 44 CSS px is the engine's own tap splat at scale 1
+    if (m.splat) engine.splat(m.splat[0] * w, m.splat[1] * h, { size: 44 * scale * m.size, color: m.color, seed: m.seed });
+    else await PaintEngine.paintStroke(engine, m.pts.map(([x, y]) => [x * w, y * h]), { speed: m.speed, flick: m.flick, color: m.color, seed: m.seed, animate });
+  }
+}
+
+// ── the big one ──
+const art = document.getElementById('art');
+let big = null, run = 0;
+async function paintBig(animate) {
+  const word = document.getElementById('seed').value.trim() || 'hello world';
+  const style = document.getElementById('style').value;
+  document.getElementById('seedLabel').textContent = word;
+  try { history.replaceState(null, '', '?seed=' + encodeURIComponent(word) + '&style=' + style); } catch (e) { /* file:// */ }
+  const comp = compose(word, style);
+  const w = art.clientWidth, h = art.clientHeight;
+  if (big) big.destroy();
+  big = PaintEngine.mount(art, { input: false, paper: true, seed: comp.engineSeed, scale: scaleFor(w, h) });
+  const mine = ++run;
+  return paintInto(big, w, h, comp, animate && 3, () => run === mine);
+}
+
+document.getElementById('form').addEventListener('submit', (e) => { e.preventDefault(); paintBig(true); });
+document.getElementById('style').addEventListener('change', () => paintBig(true));
+const WORDS = ['montréal', 'sunday', 'marmalade', 'velvet', 'harbour', 'pistachio', 'thunder', 'ginger', 'lullaby', 'neon', 'origami', 'saffron', 'tangerine', 'glacier', 'mango', 'bonjour', 'jazz', 'lagoon'];
+document.getElementById('surprise').addEventListener('click', () => {
+  const s = document.getElementById('style');
+  document.getElementById('seed').value = WORDS[Math.floor(Math.random() * WORDS.length)];
+  s.value = s.options[Math.floor(Math.random() * s.options.length)].value;
+  paintBig(true);
+});
+
+// Download: the same composition painted off screen at wallpaper size, finished with flush()
+document.getElementById('download').addEventListener('click', async () => {
+  const word = document.getElementById('seed').value.trim() || 'hello world';
+  const style = document.getElementById('style').value;
+  const comp = compose(word, style);
+  const W = 1920, H = 1200;
+  const canvas = document.createElement('canvas');
+  const engine = PaintEngine.createPaintEngine({ canvas, dpr: 1, paper: true, seed: comp.engineSeed, scale: scaleFor(W, H), budget: { maxMarks: Infinity } });
+  engine.resize(W, H);
+  await paintInto(engine, W, H, comp, false);
+  engine.flush();
+  canvas.toBlob((blob) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'paint-engine-' + word.replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }, 'image/png');
+});
+
+// ── avatars and covers: small instant paintings ──
+function tile(container, word, style) {
+  const w = container.clientWidth, h = container.clientHeight;
+  const comp = compose(word, style);
+  const e = PaintEngine.mount(container, { input: false, paper: true, seed: comp.engineSeed, scale: scaleFor(w, h) });
+  paintInto(e, w, h, comp, false);
+}
+const NAMES = ['Ada', 'Grace', 'Linus', 'Margaret', 'Alan', 'Hedy'];
+const avatars = document.getElementById('avatars');
+for (const name of NAMES) {
+  const f = document.createElement('figure');
+  f.className = 'avatar';
+  f.innerHTML = '<div class="face"></div><figcaption></figcaption>';
+  f.querySelector('figcaption').textContent = name;
+  avatars.appendChild(f);
+}
+const TITLES = [['Ten things I learned from pottery', 'swash'], ['Why we paint on Sundays', 'bloom'], ['A field guide to Montréal murals', 'weave']];
+const covers = document.getElementById('covers');
+for (const [title] of TITLES) {
+  const f = document.createElement('figure');
+  f.className = 'cover';
+  f.innerHTML = '<div class="img"></div><figcaption><b></b><span>seeded by its title</span></figcaption>';
+  f.querySelector('b').textContent = title;
+  covers.appendChild(f);
+}
+// built once they're about to scroll into view
+const io = new IntersectionObserver((entries) => {
+  for (const en of entries) {
+    if (!en.isIntersecting) continue;
+    io.unobserve(en.target);
+    if (en.target === avatars) [...avatars.querySelectorAll('.face')].forEach((el, i) => tile(el, NAMES[i], 'bloom'));
+    else [...covers.querySelectorAll('.img')].forEach((el, i) => tile(el, TITLES[i][0], TITLES[i][1]));
+  }
+}, { rootMargin: '200px' });
+io.observe(avatars);
+io.observe(covers);
+
+// A link with ?seed= opens that painting
+const params = new URLSearchParams(location.search);
+if (params.get('seed')) document.getElementById('seed').value = params.get('seed');
+if (params.get('style')) document.getElementById('style').value = params.get('style');
+paintBig(true);
+</script>
+</body>
+</html>

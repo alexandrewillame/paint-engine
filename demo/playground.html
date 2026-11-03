@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Playground · Paint Engine</title>
+<meta name="description" content="Finger-paint with real-looking acrylic. Undo, replay, save, and share your painting as a link.">
+<link rel="icon" href="assets/img/mark-64.png" type="image/png">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { background: var(--paper); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
+  #stage { position: fixed; inset: 0; transition: background-color .25s ease; }
+  #stage[data-bg="white"] { background: #ffffff; }
+  #stage[data-bg="dark"] { background: #1d1916; }
+
+  #prompt {
+    position: fixed; left: 50%; top: 45%; transform: translate(-50%, -50%);
+    font: 600 clamp(24px, 5vw, 34px)/1.2 var(--serif); color: #8b7d6b;
+    text-align: center; pointer-events: none; transition: opacity .3s ease; z-index: 5;
+  }
+  #prompt small { display: block; margin-top: 10px; font: 500 15px/1.4 var(--sans); color: #9a8c79; }
+  #prompt.hidden { opacity: 0; }
+  #stage[data-bg="dark"] ~ #prompt { color: #b7a993; }
+
+  .dock {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    display: flex; justify-content: center;
+    padding: 0 10px max(12px, env(safe-area-inset-bottom));
+    pointer-events: none;
+  }
+  .dock .toolbar { pointer-events: auto; max-width: 760px; }
+  .colors { display: flex; align-items: center; gap: 7px; padding: 0 6px; }
+  .mix {
+    width: 30px; height: 30px; border-radius: 50%; padding: 0; cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, .9); box-shadow: 0 0 0 1px var(--line);
+  }
+  .mix[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); transform: scale(1.12); }
+  select.tool { appearance: none; -webkit-appearance: none; padding: 0 28px 0 12px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%231d1916' stroke-width='2.4' d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 8px center / 14px no-repeat; }
+  .tool.armed { background: var(--red); color: #fff; }
+</style>
+</head>
+<body>
+<div id="stage" data-bg="paper"></div>
+<div id="prompt">Paint something!<small>Slow for a loaded brush, fast for dry streaks, flick to throw paint, tap to splat.</small></div>
+
+<header class="demo-bar">
+  <a class="chip" href="../"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m6-6-6 6 6 6"/></svg>Paint Engine</a>
+  <span class="chip chip--title">Playground</span>
+  <span class="spacer"></span>
+  <a class="chip" href="https://github.com/alexandrewillame/paint-engine/blob/main/demo/playground.html">Source</a>
+</header>
+
+<div class="dock">
+  <div class="toolbar" role="toolbar" aria-label="Painting tools">
+    <div class="colors" id="colors" role="group" aria-label="Colour"></div>
+    <select class="tool" id="palette" aria-label="Palette"></select>
+    <span class="sep" aria-hidden="true"></span>
+    <button class="tool" id="undo" type="button" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M9 14 4 9l5-5"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span class="label">Undo</span></button>
+    <button class="tool" id="replay" type="button" title="Watch it being painted again"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg><span class="label">Replay</span></button>
+    <button class="tool" id="clear" type="button" title="Clear"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M10 11v6m4-6v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg><span class="label">Clear</span></button>
+    <span class="sep" aria-hidden="true"></span>
+    <select class="tool" id="bg" aria-label="Background">
+      <option value="paper">Paper</option>
+      <option value="white">White</option>
+      <option value="dark">Dark</option>
+    </select>
+    <button class="tool" id="save" type="button" title="Save as PNG"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></svg><span class="label">Save</span></button>
+    <button class="tool" id="share" type="button" title="Copy a link to this painting"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg><span class="label">Share</span></button>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="../paint-engine.js"></script>
+<script>
+'use strict';
+
+const PALETTES = {
+  Studio:    ['#17A6B5', '#29ABE2', '#3B5BA5', '#3B12E8', '#F7941E', '#F04E23'], // the engine's default
+  Besties:   ['#EE4C9B', '#E01B62', '#8B5FBF', '#B892D8', '#F6A6C8'],            // Creative Besties Club MTL
+  Sunset:    ['#FF5E5B', '#FF9F1C', '#FFCF56', '#D7263D', '#6A2C70'],
+  Forest:    ['#2D6A4F', '#40916C', '#95D5B2', '#A98467', '#6C584C'],
+  Primaries: ['#D62828', '#F7C548', '#1F4E9C', '#161616', '#FBFBF8'],
+  Ink:       ['#1D1916', '#3D405B', '#6B7280', '#C1121F'],
+};
+
+const $ = (id) => document.getElementById(id);
+const stage = $('stage');
+const state = {
+  palette: 'Studio',
+  color: null,          // null: mix, a new palette colour for every stroke
+  bg: 'paper',
+  scale: 1,             // brush size; below 1 only while showing a shared painting fitted to this screen
+  engineSeed: (Math.random() * 2 ** 32) >>> 0,
+};
+
+// ── recording ──
+// Everything needed to repaint the picture exactly: each stroke's points, colour and seed, plus the
+// engine's own seed. Inputs are rounded BEFORE they reach the engine (quarter pixels, whole
+// milliseconds), so what's on screen is exactly what a replay of the record draws.
+let strokes = [];     // [{ color, seed, pts: [[x, y, t], ...] }], t in ms from the stroke's start
+let current = null;   // the stroke being recorded
+let replaying = false;
+let paint = null;
+const q4 = (v) => Math.round(v * 4) / 4;
+
+// A palette colour with a little jitter, the way the engine picks one itself -- decided here so
+// the record knows it.
+function mixColor() {
+  const list = PALETTES[state.palette];
+  const n = parseInt(list[Math.floor(Math.random() * list.length)].slice(1), 16);
+  const jitter = (v) => Math.max(0, Math.min(255, Math.round(v + (Math.random() - 0.5) * 22)));
+  return '#' + [n >> 16 & 255, n >> 8 & 255, n & 255].map((v) => jitter(v).toString(16).padStart(2, '0')).join('');
+}
+
+function build() {
+  if (paint) paint.destroy();
+  paint = PaintEngine.mount(stage, {
+    paper: state.bg === 'paper',
+    seed: state.engineSeed,
+    scale: state.scale,
+    color: () => state.color || mixColor(),
+  });
+  // mount() feeds pointer input through these three, so wrapping them records every stroke
+  const begin = paint.beginStroke, extend = paint.extendStroke, end = paint.endStroke;
+  paint.beginStroke = (x, y, t, o) => {
+    hidePrompt();
+    const color = (o && o.color) || mixColor();
+    const seed = o && o.seed != null ? o.seed : (Math.random() * 1e9) | 0;
+    x = q4(x); y = q4(y); t = Math.round(t);
+    if (!replaying) current = { color, seed, t0: t, pts: [[x, y, 0]] };
+    begin(x, y, t, { color, seed });
+  };
+  paint.extendStroke = (x, y, t) => {
+    x = q4(x); y = q4(y); t = Math.round(t);
+    if (current) current.pts.push([x, y, t - current.t0]);
+    extend(x, y, t);
+  };
+  paint.endStroke = (t) => {
+    if (current) { strokes.push({ color: current.color, seed: current.seed, pts: current.pts }); current = null; updateButtons(); }
+    end(t);
+  };
+}
+
+// ── replay ──
+function repaintInstantly() {
+  replaying = true;
+  for (const s of strokes) {
+    paint.beginStroke(s.pts[0][0], s.pts[0][1], 0, { color: s.color, seed: s.seed });
+    for (let i = 1; i < s.pts.length; i++) paint.extendStroke(s.pts[i][0], s.pts[i][1], s.pts[i][2]);
+    paint.endStroke(s.pts[s.pts.length - 1][2]);
+  }
+  replaying = false;
+}
+// In real time, stroke by stroke (with the pauses between strokes shortened)
+let replayRun = 0;
+async function replayAnimated() {
+  const run = ++replayRun;
+  replaying = true;
+  stage.style.pointerEvents = 'none';
+  paint.clear();
+  updateButtons();
+  for (const s of strokes) {
+    const t0 = Math.round(performance.now());
+    paint.beginStroke(s.pts[0][0], s.pts[0][1], t0, { color: s.color, seed: s.seed });
+    let i = 1;
+    await new Promise((done) => {
+      const step = () => {
+        const until = run === replayRun ? performance.now() - t0 : Infinity;
+        for (; i < s.pts.length && s.pts[i][2] <= until; i++) paint.extendStroke(s.pts[i][0], s.pts[i][1], t0 + s.pts[i][2]);
+        if (i < s.pts.length) requestAnimationFrame(step); else done();
+      };
+      requestAnimationFrame(step);
+    });
+    paint.endStroke(t0 + s.pts[s.pts.length - 1][2]);
+    if (run !== replayRun) return;
+    await new Promise((r) => setTimeout(r, 140));
+    if (run !== replayRun) return;
+  }
+  replaying = false;
+  stage.style.pointerEvents = '';
+  updateButtons();
+}
+// Skip to the end: the finished picture, all at once
+function finishReplay() {
+  if (!replaying) return;
+  replayRun++;
+  paint.clear();
+  repaintInstantly();
+  stage.style.pointerEvents = '';
+  updateButtons();
+}
+
+// ── UI ──
+const toastEl = $('toast');
+let toastTimer = 0;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+}
+function hidePrompt() { $('prompt').classList.add('hidden'); }
+function updateButtons() {
+  const empty = strokes.length === 0;
+  $('undo').disabled = empty || replaying;
+  $('replay').disabled = empty;
+  $('replay').querySelector('.label').textContent = replaying ? 'Skip' : 'Replay';
+  $('replay').title = replaying ? 'Skip to the end' : 'Watch it being painted again';
+  $('clear').disabled = empty || replaying;
+  $('share').disabled = empty || replaying;
+}
+
+function renderColors() {
+  const box = $('colors');
+  box.textContent = '';
+  const list = PALETTES[state.palette];
+  const mix = document.createElement('button');
+  mix.className = 'mix';
+  mix.type = 'button';
+  mix.title = 'Mix: a different colour from the palette for every stroke';
+  mix.setAttribute('aria-label', 'Mix colours');
+  mix.style.background = 'conic-gradient(' + list.map((c, i) => c + ' ' + (i / list.length * 360) + 'deg ' + ((i + 1) / list.length * 360) + 'deg').join(',') + ')';
+  mix.setAttribute('aria-pressed', String(!state.color));
+  mix.onclick = () => { state.color = null; renderColors(); };
+  box.appendChild(mix);
+  for (const c of list) {
+    const b = document.createElement('button');
+    b.className = 'swatch-btn';
+    b.type = 'button';
+    b.style.background = c;
+    b.title = c;
+    b.setAttribute('aria-label', 'Colour ' + c);
+    b.setAttribute('aria-pressed', String(state.color === c));
+    b.onclick = () => { state.color = c; renderColors(); };
+    box.appendChild(b);
+  }
+}
+const paletteSel = $('palette');
+for (const name of Object.keys(PALETTES)) paletteSel.add(new Option(name, name));
+paletteSel.onchange = () => { state.palette = paletteSel.value; state.color = null; renderColors(); };
+
+$('undo').onclick = () => {
+  if (replaying || paint.drawing || !strokes.length) return;
+  strokes.pop();
+  paint.undo();
+  updateButtons();
+};
+$('replay').onclick = () => (replaying ? finishReplay() : replayAnimated());
+
+let clearTimer = 0;
+const clearBtn = $('clear');
+const disarmClear = () => {
+  clearTimeout(clearTimer);
+  clearBtn.classList.remove('armed');
+  clearBtn.querySelector('.label').textContent = 'Clear';
+  clearBtn.title = 'Clear';
+};
+clearBtn.onclick = () => {
+  if (!clearBtn.classList.contains('armed')) {
+    // two taps, so a stray one can't wipe a painting
+    clearBtn.classList.add('armed');
+    clearBtn.querySelector('.label').textContent = 'Sure?';
+    clearBtn.title = 'Click again to clear';
+    clearTimer = setTimeout(disarmClear, 2500);
+    if (window.matchMedia('(max-width: 560px)').matches) toast('Tap again to clear');
+    return;
+  }
+  disarmClear();
+  strokes = [];
+  history.replaceState(null, '', location.pathname);
+  if (state.scale !== 1) { state.scale = 1; build(); } else paint.clear();
+  updateButtons();
+};
+
+$('bg').onchange = (e) => {
+  finishReplay();
+  state.bg = e.target.value;
+  stage.dataset.bg = state.bg;
+  build();
+  repaintInstantly();
+};
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); $('undo').click(); }
+});
+
+// ── save as PNG ──
+$('save').onclick = () => {
+  finishReplay();
+  // a frame later, so a stroke that's still baking has landed
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const src = paint.canvas;
+    const out = document.createElement('canvas');
+    out.width = src.width; out.height = src.height;
+    const g = out.getContext('2d');
+    if (state.bg !== 'paper') { g.fillStyle = state.bg === 'dark' ? '#1d1916' : '#ffffff'; g.fillRect(0, 0, out.width, out.height); }
+    g.drawImage(src, 0, 0);
+    out.toBlob((blob) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'paint-engine.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }, 'image/png');
+  }));
+};
+
+// ── share as a link: the strokes themselves, packed into the URL's #fragment ──
+// Bytes: version, flags, then (deflated where the browser can) the engine seed, canvas size,
+// background, palette, and per stroke its colour, seed and points as zigzag varint deltas (quarter
+// px, ms). Nothing is uploaded anywhere: the painting lives in the link.
+const BGS = ['paper', 'white', 'dark'];
+const NAMES = Object.keys(PALETTES);
+function writer() {
+  const bytes = [];
+  const varint = (v) => { v = Math.max(0, Math.round(v)); while (v > 127) { bytes.push((v & 127) | 128); v = Math.floor(v / 128); } bytes.push(v); };
+  return { bytes, varint, zigzag: (v) => varint(v >= 0 ? v * 2 : -v * 2 - 1), byte: (b) => bytes.push(b & 255) };
+}
+function reader(bytes) {
+  let i = 0;
+  const varint = () => { let v = 0, m = 1, b; do { b = bytes[i++]; v += (b & 127) * m; m *= 128; } while (b & 128); return v; };
+  return { varint, zigzag: () => { const v = varint(); return v % 2 ? -(v + 1) / 2 : v / 2; }, byte: () => bytes[i++] };
+}
+const deflate = (bytes, how) => new Response(new Blob([bytes]).stream().pipeThrough(how)).arrayBuffer().then((b) => new Uint8Array(b));
+async function pack() {
+  const w = writer();
+  w.varint(state.engineSeed);
+  w.varint(stage.clientWidth); w.varint(stage.clientHeight);
+  w.byte(BGS.indexOf(state.bg)); w.byte(NAMES.indexOf(state.palette));
+  w.varint(strokes.length);
+  for (const s of strokes) {
+    const n = parseInt(s.color.slice(1), 16);
+    w.byte(n >> 16); w.byte(n >> 8); w.byte(n);
+    w.varint(s.seed >>> 0);
+    w.varint(s.pts.length);
+    let px = 0, py = 0, pt = 0;
+    for (const [x, y, t] of s.pts) {
+      w.zigzag(x * 4 - px); w.zigzag(y * 4 - py); w.varint(t - pt);
+      px = x * 4; py = y * 4; pt = t;
+    }
+  }
+  const canDeflate = typeof CompressionStream === 'function';
+  let body = new Uint8Array(w.bytes);
+  if (canDeflate) body = await deflate(body, new CompressionStream('deflate-raw'));
+  const all = new Uint8Array(2 + body.length);
+  all[0] = 1; all[1] = canDeflate ? 1 : 0;
+  all.set(body, 2);
+  let bin = '';
+  for (let i = 0; i < all.length; i++) bin += String.fromCharCode(all[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+async function unpack(text) {
+  const bin = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
+  const all = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) all[i] = bin.charCodeAt(i);
+  if (all[0] !== 1) throw new Error('unknown version');
+  let body = all.subarray(2);
+  if (all[1] & 1) body = await deflate(body, new DecompressionStream('deflate-raw'));
+  const r = reader(body);
+  const out = { engineSeed: r.varint(), w: r.varint(), h: r.varint(), bg: BGS[r.byte()] || 'paper', palette: NAMES[r.byte()] || 'Studio', strokes: [] };
+  const count = r.varint();
+  for (let k = 0; k < count; k++) {
+    const color = '#' + [r.byte(), r.byte(), r.byte()].map((v) => v.toString(16).padStart(2, '0')).join('');
+    const seed = r.varint(), n = r.varint();
+    const pts = [];
+    let px = 0, py = 0, pt = 0;
+    for (let i = 0; i < n; i++) { px += r.zigzag(); py += r.zigzag(); pt += r.varint(); pts.push([px / 4, py / 4, pt]); }
+    out.strokes.push({ color, seed, pts });
+  }
+  return out;
+}
+$('share').onclick = async () => {
+  try {
+    const code = await pack();
+    if (code.length > 120000) { toast('Too big for a link. Save it as a PNG instead.'); return; }
+    history.replaceState(null, '', '#p=' + code);
+    const url = location.href;
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+      await navigator.share({ title: 'My Paint Engine painting', url });
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast('Link copied. The painting is inside it (' + (code.length / 1024).toFixed(1) + ' KB).');
+    }
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    toast('Could not share: ' + ((err && err.message) || err));
+  }
+};
+
+// A shared link: rebuild the painting fitted to this screen and paint it in front of the visitor.
+// Fitting scales positions, brush (the engine's `scale` option) and time together, so every stroke
+// keeps its speed relative to its size: the same marks, smaller.
+async function openShared() {
+  const m = location.hash.match(/^#p=([A-Za-z0-9_-]+)$/);
+  if (!m) return;
+  let data;
+  try { data = await unpack(m[1]); } catch (err) { toast('That painting link looks broken.'); return; }
+  const k = Math.min(1, stage.clientWidth / data.w, stage.clientHeight / data.h);
+  const ox = Math.max(0, (stage.clientWidth - data.w * k) / 2), oy = Math.max(0, (stage.clientHeight - data.h * k) / 2);
+  Object.assign(state, { engineSeed: data.engineSeed, bg: data.bg, palette: data.palette, scale: k });
+  stage.dataset.bg = state.bg; $('bg').value = state.bg; paletteSel.value = state.palette;
+  renderColors();
+  strokes = data.strokes.map((s) => ({
+    color: s.color, seed: s.seed,
+    pts: s.pts.map(([x, y, t]) => [q4(ox + x * k), q4(oy + y * k), Math.round(t * k)]),
+  }));
+  build();
+  hidePrompt();
+  updateButtons();
+  replayAnimated();
+}
+
+renderColors();
+build();
+updateButtons();
+openShared();
+</script>
+</body>
+</html>

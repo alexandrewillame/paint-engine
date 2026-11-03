@@ -1,0 +1,11 @@
+name: Idea or feature
+description: A new option, kind of mark or demo
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to make?
+      description: What you're building and what's missing. Sketches and links to examples are welcome.
+    validations:
+      required: true

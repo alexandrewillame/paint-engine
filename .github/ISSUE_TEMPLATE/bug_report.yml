@@ -1,0 +1,24 @@
+name: Bug report
+description: Something paints wrong, stutters, or doesn't work
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got. A screenshot or screen recording helps a lot.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: "e.g. iPhone 13 / Safari 18, Pixel 7 / Chrome 131, Windows 11 / Firefox 133"
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Code or link
+      description: The smallest page or snippet that shows the problem, or a link to where it happens.
+      render: html

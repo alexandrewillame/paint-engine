@@ -1,0 +1,8 @@
+# Text files are stored and checked out with LF line endings
+* text=auto eol=lf
+*.png binary
+*.webp binary
+
+# The demo site isn't the library: keep it out of GitHub's language stats
+demo/** linguist-documentation
+index.html linguist-documentation

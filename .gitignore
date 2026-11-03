@@ -1,0 +1,8 @@
+# Notes and assets for posting about the project: kept local
+/launch-kit/
+# Video files are large
+media/*.mp4
+media/*.webm
+node_modules/
+.DS_Store
+Thumbs.db

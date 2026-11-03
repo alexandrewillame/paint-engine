@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Coloring book · Paint Engine</title>
+<meta name="description" content="A coloring book with real paint: line art on top, acrylic underneath.">
+<link rel="icon" href="assets/img/mark-64.png" type="image/png">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .app { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 4px 12px max(14px, env(safe-area-inset-bottom)); }
+  .sheet {
+    position: relative;
+    width: min(100%, calc(100vh - 230px), 720px);
+    width: min(100%, calc(100dvh - 230px), 720px);
+    aspect-ratio: 1;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 0 0 1px var(--line), 0 24px 50px -30px rgba(60, 40, 20, .7);
+    overflow: hidden;
+  }
+  #paint { position: absolute; inset: 0; }
+  /* the drawing lies on the paint, multiplied, so its lines stay dark over any colour */
+  #lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; mix-blend-mode: multiply; }
+  .pictures { display: flex; gap: 8px; }
+  .pictures button { height: 38px; padding: 0 14px; border-radius: 999px; border: 2px solid var(--ink); background: var(--card); font: 700 14px var(--sans); cursor: pointer; color: var(--ink); }
+  .pictures button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .palette { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 720px; }
+  .palette .swatch-btn { width: 44px; height: 44px; border-width: 3px; }
+  .actions { display: flex; gap: 8px; }
+  .tool.armed { background: var(--red); color: #fff; }
+  @media (max-height: 640px) { .palette .swatch-btn { width: 36px; height: 36px; } }
+</style>
+</head>
+<body>
+<header class="demo-bar demo-bar--static">
+  <a class="chip" href="../"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m6-6-6 6 6 6"/></svg>Paint Engine</a>
+  <span class="chip chip--title">Coloring book</span>
+  <span class="spacer"></span>
+  <a class="chip" href="https://github.com/alexandrewillame/paint-engine/blob/main/demo/coloring.html">Source</a>
+</header>
+
+<div class="app">
+  <div class="pictures" role="group" aria-label="Picture">
+    <button type="button" data-pic="flower" aria-pressed="true">Flower</button>
+    <button type="button" data-pic="fish" aria-pressed="false">Fish</button>
+    <button type="button" data-pic="mandala" aria-pressed="false">Mandala</button>
+  </div>
+  <div class="sheet" id="sheet">
+    <div id="paint"></div>
+    <svg id="lines" viewBox="0 0 600 600" aria-label="Line drawing to colour in" role="img"></svg>
+  </div>
+  <div class="palette" id="palette" role="group" aria-label="Colour"></div>
+  <div class="toolbar actions">
+    <button class="tool" id="undo" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M9 14 4 9l5-5"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span class="label">Undo</span></button>
+    <button class="tool" id="clear" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M10 11v6m4-6v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg><span class="label">Start over</span></button>
+    <button class="tool" id="save" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></svg><span class="label">Save</span></button>
+  </div>
+</div>
+
+<script src="../paint-engine.js"></script>
+<script>
+'use strict';
+// ── the drawings: plain SVG line art, 600 x 600 ──
+const L = 'fill="none" stroke="#1d1916" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"';
+const petals = (cx, cy, n, dist, rx, ry) => Array.from({ length: n }, (_, i) =>
+  `<ellipse cx="${cx}" cy="${cy - dist}" rx="${rx}" ry="${ry}" transform="rotate(${(360 / n) * i} ${cx} ${cy})"/>`).join('');
+const PICTURES = {
+  flower: `<g ${L}>
+    <circle cx="505" cy="92" r="42"/>
+    <path d="M505 26v-16M505 174v-16M439 92h-16M587 92h-16M458 45l-11-11M563 150l-11-11M552 45l11-11M447 150l11-11"/>
+    ${petals(282, 208, 8, 98, 36, 58)}
+    <circle cx="282" cy="208" r="40"/>
+    <path d="M282 306C276 360 292 400 286 444"/>
+    <path d="M284 390C238 378 206 350 190 316C236 314 272 342 284 390Z"/>
+    <path d="M287 360C334 352 368 326 384 292C342 290 302 316 287 360Z"/>
+    <path d="M180 444h212v34H180z"/>
+    <path d="M194 478l18 96h148l18-96"/>
+    <path d="M24 560c30-14 56-14 86 0M500 566c26-12 50-12 76 0"/>
+  </g>`,
+  fish: `<g ${L}>
+    <path d="M96 304C156 178 364 166 438 300C364 432 156 428 96 304Z"/>
+    <path d="M436 300L548 214C522 270 522 330 548 388Z"/>
+    <path d="M232 236C258 276 258 330 232 370"/>
+    <path d="M246 196C278 136 340 136 368 202"/>
+    <path d="M276 412C296 456 340 458 352 404"/>
+    <circle cx="172" cy="282" r="18"/>
+    <path d="M286 268c12 12 24 12 36 0M286 312c12 12 24 12 36 0M326 290c12 12 24 12 36 0M326 334c12 12 24 12 36 0M366 268c10 10 20 10 30 0M366 312c10 10 20 10 30 0"/>
+    <circle cx="96" cy="150" r="16"/><circle cx="66" cy="96" r="11"/><circle cx="104" cy="56" r="7"/>
+    <path d="M20 540c40-26 80-26 120 0s80 26 120 0 80-26 120 0 80 26 120 0 60-20 80-8"/>
+  </g><circle cx="176" cy="280" r="7" fill="#1d1916"/>`,
+  mandala: (() => {
+    let s = `<g ${L}><circle cx="300" cy="300" r="42"/><circle cx="300" cy="300" r="270"/>`;
+    s += petals(300, 300, 8, 82, 26, 40);
+    s += `<circle cx="300" cy="300" r="128"/>`;
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2, a1 = a - 0.2, a2 = a + 0.2;
+      const p = (r, t) => (300 + Math.cos(t) * r).toFixed(1) + ' ' + (300 + Math.sin(t) * r).toFixed(1);
+      s += `<path d="M${p(128, a1)}Q${p(190, a1 - 0.08)} ${p(214, a)}Q${p(190, a2 + 0.08)} ${p(128, a2)}"/>`;
+    }
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      s += `<circle cx="${(300 + Math.cos(a) * 244).toFixed(1)}" cy="${(300 + Math.sin(a) * 244).toFixed(1)}" r="17"/>`;
+    }
+    return s + '</g>';
+  })(),
+};
+
+const COLORS = ['#E63946', '#F77F00', '#FCBF49', '#8AC926', '#2A9D8F', '#1982C4', '#6A4C93', '#F15BB5', '#9C6644', '#1D1916'];
+
+const sheet = document.getElementById('sheet');
+const lines = document.getElementById('lines');
+// A brush sized to the sheet, so the regions take the same number of strokes on a phone as on a
+// big screen
+const paint = PaintEngine.mount('#paint', { paper: false, scale: Math.max(0.3, sheet.clientWidth / 600 * 0.62), color: COLORS[0] });
+
+function showPicture(name) {
+  lines.innerHTML = PICTURES[name];
+  document.querySelectorAll('.pictures button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pic === name)));
+  paint.clear();
+}
+document.querySelectorAll('.pictures button').forEach((b) => b.addEventListener('click', () => showPicture(b.dataset.pic)));
+
+const pal = document.getElementById('palette');
+for (const c of COLORS) {
+  const b = document.createElement('button');
+  b.className = 'swatch-btn';
+  b.type = 'button';
+  b.style.background = c;
+  b.setAttribute('aria-label', 'Colour ' + c);
+  b.setAttribute('aria-pressed', String(c === paint.color));
+  b.addEventListener('click', () => {
+    paint.color = c;
+    pal.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  });
+  pal.appendChild(b);
+}
+
+document.getElementById('undo').addEventListener('click', () => paint.undo());
+const clearBtn = document.getElementById('clear');
+let armTimer = 0;
+clearBtn.addEventListener('click', () => {
+  if (!clearBtn.classList.contains('armed')) {
+    clearBtn.classList.add('armed');
+    clearBtn.querySelector('.label').textContent = 'Sure?';
+    armTimer = setTimeout(() => { clearBtn.classList.remove('armed'); clearBtn.querySelector('.label').textContent = 'Start over'; }, 2500);
+    return;
+  }
+  clearTimeout(armTimer);
+  clearBtn.classList.remove('armed');
+  clearBtn.querySelector('.label').textContent = 'Start over';
+  paint.clear();
+});
+
+// Save: white paper, the paint, then the drawing multiplied over it (as on screen)
+document.getElementById('save').addEventListener('click', () => {
+  paint.flush();
+  const src = paint.canvas;
+  const out = document.createElement('canvas');
+  out.width = src.width; out.height = src.height;
+  const g = out.getContext('2d');
+  g.fillStyle = '#fff';
+  g.fillRect(0, 0, out.width, out.height);
+  g.drawImage(src, 0, 0);
+  const svg = new XMLSerializer().serializeToString(lines);
+  const img = new Image();
+  img.onload = () => {
+    g.globalCompositeOperation = 'multiply';
+    g.drawImage(img, 0, 0, out.width, out.height);
+    out.toBlob((blob) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'my-coloring.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }, 'image/png');
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.replace('<svg', '<svg width="600" height="600"'));
+});
+
+showPicture('flower');
+</script>
+</body>
+</html>
