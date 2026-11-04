@@ -19,19 +19,20 @@
 <p align="center">
   <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1d1916">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-0-17a6b5">
-  <img alt="About 20 KB gzipped without comments" src="https://img.shields.io/badge/gzipped-~20%20KB-f04e23">
+  <img alt="About 17 KB minified and gzipped" src="https://img.shields.io/badge/min%2Bgzip-17%20KB-f04e23">
 </p>
 
 ---
 
-Paint Engine paints the way a loaded brush does. It reads how fast your hand moves: drag slowly and you
-get a wide, wet, glossy stroke with a frayed start; drag fast and the brush runs dry, narrow and
-streaky, throwing droplets; lift while moving and the stroke carries on into a flicked tail; tap and
-it splatters. There are no brush images and no presets: every mark is built from hundreds of tiny
-procedural dabs, so no two strokes are alike, unless you give them the same seed.
+Paint Engine renders mouse, touch and pen input as acrylic paint on a `<canvas>`. A stroke's width
+and dryness follow the pointer's speed (55 px wide and dense when slow, 33 px and streaky from
+900 px/s), the speed at release decides how it ends (rounded, throwing droplets, or a tapered tail),
+and a tap leaves a splatter. There are no brush images or presets: marks are stamped from small
+sprites generated at startup. Every random choice comes from a seed, so the same input and seed give
+the same pixels; without a seed, each mark gets a random one.
 
-It was built for the website of [Creative Besties Club MTL](https://creativebestiesclubmtl.com/),
-where every drag stains the page, and it seemed a shame to keep it on one website.
+It was written for the website of [Creative Besties Club MTL](https://creativebestiesclubmtl.com/),
+which uses it on every page.
 
 **[Try it in your browser →](https://alexandrewillame.github.io/paint-engine/)** The whole demo site is
 wet: drag anywhere.
@@ -42,20 +43,23 @@ wet: drag anywhere.
 
 ## Features
 
-- **One file, zero dependencies.** About 20 KB gzipped without comments. A plain `<script>` tag works,
-  even on a page opened from disk; ES module and CommonJS entries and TypeScript types are included.
-- **Real paint behaviour.** Speed sets width and dryness. Bristle streaks follow the curve, edges
-  catch a glossy sheen, marks cast a soft shadow, fast strokes throw droplets, flicks leave tapered
-  tails, taps splatter, and translucent layers build up where they cross.
-- **Feels right in the hand.** A One-Euro filter removes jitter without lag; spline smoothing and
-  arc-length resampling keep strokes even at any speed or pixel density. Mouse, touch and pen.
-- **Deterministic.** Same seed and same input, same pixels. That gives you undo, replay,
-  re-rendering at a new size, and paintings you can share as a few kilobytes of numbers.
-- **Smooth on phones.** Finished strokes bake in time slices between frames, a per-frame dab budget
-  sheds decoration before structure, and a bounded history keeps memory flat.
-- **Three ways in.** `mount()` makes any element paintable, `paintPage()` lets visitors paint your
-  whole page or just one section of it (under your text or over it), and `paintStroke()` paints from
-  code along any path.
+- **One file, no dependencies.** 45 KB minified, about 17 KB gzipped. Works as a classic `<script>`
+  (global `PaintEngine`, even on a page opened from disk), an ES module (`paint-engine.mjs`) or
+  CommonJS; TypeScript types in `paint-engine.d.ts`. No build step.
+- **Canvas 2D only.** No WebGL, no image or font files. Marks are stamped with normal alpha blending,
+  so overlapping paint gets darker; each mark casts a soft shadow from its own alpha.
+- **Seeded marks.** Marks are stored as recipes (path, colour, seed), and re-rendering a recipe gives
+  the same pixels. `undo()`, `resize()` and replays are built on that, and a painting can be saved as
+  a few kilobytes of numbers.
+- **Bounded work per frame.** The stroke in progress is drawn incrementally with a per-frame dab cap;
+  finished strokes are rendered in 3 to 8 ms slices between frames; history is capped at 150 marks by
+  default.
+- **Input.** `mount()` reads Pointer Events (mouse, touch, pen, coalesced samples). Points are filtered
+  for jitter, smoothed with a spline and resampled every 5 px, so strokes don't depend on the
+  device's event rate or pixel density.
+- **Three entry points.** `mount()` makes an element paintable, `paintPage()` lets visitors paint the
+  whole page or one element of it (under the content or blended over it), and `paintStroke()` paints
+  from code along any path.
 
 ## Demos
 
@@ -63,19 +67,19 @@ Every demo is a single HTML file: open it, then view the source.
 
 | | |
 |---|---|
-| [**Playground**](https://alexandrewillame.github.io/paint-engine/demo/playground.html) | The finger-painting toy: palettes, undo, replay, PNG export, and share-a-painting-as-a-link (the strokes travel in the URL). |
-| [**Paint the page**](https://alexandrewillame.github.io/paint-engine/) | The demo site itself: paint under the content, kept in place on a long scrolling page. |
-| [**Brush highlights**](https://alexandrewillame.github.io/paint-engine/demo/highlights.html) | Highlight, underline and circle words with real strokes as they scroll into view. |
-| [**Splat buttons**](https://alexandrewillame.github.io/paint-engine/demo/splats.html) | Likes, success states and a paint trail: throw paint instead of confetti. |
-| [**Seeded paintings**](https://alexandrewillame.github.io/paint-engine/demo/generative.html) | Type a word, get a painting, the same one every time: covers, avatars, wallpapers. |
-| [**Coloring book**](https://alexandrewillame.github.io/paint-engine/demo/coloring.html) | Line art on top, paint underneath. Made for small fingers. |
-| [**Paint to reveal**](https://alexandrewillame.github.io/paint-engine/demo/reveal.html) | A scratch card where the paint is the mask. |
-| [**Drop-in for any page**](https://alexandrewillame.github.io/paint-engine/demo/drop-in.html) | One call on an ordinary page, no CSS changes: paint blended over everything. |
-| [**Paint one section**](https://alexandrewillame.github.io/paint-engine/demo/hero-only.html) | The same kind of page with only the hero wet: paint under its text, the rest of the page stays clean. |
+| [**Playground**](https://alexandrewillame.github.io/paint-engine/demo/playground.html) | A full-page canvas with palettes, undo, replay, PNG export, and share-by-link (the strokes are encoded in the URL). |
+| [**Paint the page**](https://alexandrewillame.github.io/paint-engine/) | The demo site itself: `paintPage()` under the content of a long scrolling page. |
+| [**Brush highlights**](https://alexandrewillame.github.io/paint-engine/demo/highlights.html) | Underlines, highlights and circles fitted to words with `paintStroke()`, drawn when the text scrolls into view. |
+| [**Splat buttons**](https://alexandrewillame.github.io/paint-engine/demo/splats.html) | Splatters as feedback on a like button, a form submit and a game target, plus a paint trail behind the pointer. |
+| [**Seeded paintings**](https://alexandrewillame.github.io/paint-engine/demo/generative.html) | Paintings generated from a numeric seed, applied to avatars (seeded by user ID) and post covers (by post ID). |
+| [**Coloring book**](https://alexandrewillame.github.io/paint-engine/demo/coloring.html) | An SVG line drawing over a `mount()` canvas, with the brush scaled to the sheet. |
+| [**Paint to reveal**](https://alexandrewillame.github.io/paint-engine/demo/reveal.html) | The painted pixels used as a mask over hidden content, scratch-card style. |
+| [**Drop-in for any page**](https://alexandrewillame.github.io/paint-engine/demo/drop-in.html) | `paintPage({ layer: 'over' })` on an existing page: paint blended over the content, no CSS changes. |
+| [**Paint one section**](https://alexandrewillame.github.io/paint-engine/demo/hero-only.html) | `paintPage({ area: '.hero' })`: painting limited to one element, under its content. |
 
-Other things it's good for: a 404 page you can paint on, a paint trail behind the cursor, painted
-placeholders and covers, a guestbook wall at an event, hit marks in a canvas game. If you build one,
-open an issue and show it off.
+Other uses: a 404 page visitors can paint on, a paint trail behind the cursor, generated
+placeholders and covers, hit marks in a canvas game. Built something with it? Open an issue with a
+link.
 
 ## Quick start
 
@@ -258,6 +262,11 @@ between the card and the root creates a stacking context (`transform`, `opacity`
 `z-index` on a positioned ancestor…). When that's impractical, `layer: 'over'` blends the paint over
 everything instead, with no CSS changes.
 
+The page's own background is `<body>`'s, drawn by the browser beneath everything. If `<html>` gets a
+background too, as dark-mode extensions such as Dark Reader give it, `<body>`'s background becomes
+an ordinary block over the paint; `paintPage()` detects that and sets `isolation: isolate` on
+`<body>`, which puts the paint back between that background and the content.
+
 ### Sideways strokes on phones
 
 By default a sideways drag on a touch screen belongs to the browser: Chrome on Android can even read
@@ -322,8 +331,9 @@ The file touches no DOM until you create an engine, so importing it during serve
 
 ## How it works
 
-1. **Smoothing.** Raw pointer samples go through a One-Euro filter (kills jitter at low speed without
-   adding lag at high speed), a Catmull-Rom spline, and arc-length resampling, then get a frame
+1. **Smoothing.** Raw pointer samples go through a [One Euro filter](https://gery.casiez.net/1euro/)
+   (an adaptive low-pass filter: it removes jitter at low speed without adding lag at high speed), a
+   Catmull-Rom spline, and arc-length resampling, then get a frame
    (tangent, normal, speed) at every step. The resampler is incremental and exactly equal to a
    one-shot run, so the live preview and the final bake agree pixel for pixel.
 2. **Dabs.** A pool of irregular procedural sprites (soft and crisp, with mip levels) is generated at

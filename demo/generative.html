@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Seeded paintings · Paint Engine</title>
-<meta name="description" content="Type a word, get a painting. The same word always paints the same picture.">
+<meta name="description" content="Paintings generated from a numeric seed: the same seed paints the same picture at any size, on any device.">
 <link rel="icon" href="assets/img/mark-64.png" type="image/png">
 <link rel="stylesheet" href="assets/style.css">
 <style>
@@ -13,7 +13,8 @@
   .intro h1 { font-size: clamp(40px, 7vw, 64px); margin-bottom: 14px; }
   .intro p { color: var(--ink-soft); font-size: 18px; margin: 0; }
   .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
-  .controls input[type="text"] { flex: 1 1 220px; min-width: 0; height: 48px; padding: 0 16px; border: 2px solid var(--ink); border-radius: 12px; font: 600 18px var(--serif); background: #fff; }
+  .controls label:not(.sr) { font: 700 15px var(--sans); }
+  .controls input { flex: 1 1 160px; min-width: 0; max-width: 240px; height: 48px; padding: 0 14px; border: 2px solid var(--ink); border-radius: 12px; font: 600 17px var(--mono); background: #fff; }
   .controls select { height: 48px; padding: 0 12px; border: 2px solid var(--ink); border-radius: 12px; font: 600 15px var(--sans); background: var(--card); }
   .controls .btn { height: 48px; }
   .canvas-frame { padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 20px 40px -26px rgba(60, 40, 20, .6); }
@@ -46,13 +47,13 @@
 
 <main>
   <div class="intro">
-    <h1>Type a word, get a painting.</h1>
-    <p>Every random choice the engine makes comes from a seed. Seed it with a word and you get a painting only that word makes, the same one every time, on every device. Use it for covers, avatars, placeholders or wallpapers.</p>
+    <h1>Paintings from a seed</h1>
+    <p>Every random choice the engine makes (stroke texture, splatter, colour jitter) comes from a seed. In this demo a short composition script also takes the layout and colours from that seed, so a single integer reproduces the whole painting: same seed and style, same picture, at any size. The page starts on a random seed; the URL keeps it.</p>
   </div>
 
   <form class="controls" id="form">
-    <label class="sr" for="seed">Seed word</label>
-    <input id="seed" type="text" value="hello world" autocomplete="off" spellcheck="false" maxlength="60">
+    <label for="seed">Seed</label>
+    <input id="seed" type="number" min="0" max="2147483647" step="1" inputmode="numeric" autocomplete="off">
     <label class="sr" for="style">Style</label>
     <select id="style">
       <option value="swash">Swash</option>
@@ -60,20 +61,20 @@
       <option value="weave">Weave</option>
       <option value="confetti">Confetti</option>
     </select>
-    <button class="btn btn--ink" type="submit">Paint it</button>
-    <button class="btn btn--line" type="button" id="surprise">Surprise me</button>
+    <button class="btn btn--ink" type="submit">Paint</button>
+    <button class="btn btn--line" type="button" id="random">Random seed</button>
     <button class="btn btn--line" type="button" id="download">Download 1920×1200</button>
   </form>
 
   <div class="canvas-frame"><div id="art"></div></div>
-  <p class="caption"><span>Seed <b id="seedLabel">hello world</b></span><span>Paint the same word again: same picture.</span></p>
+  <p class="caption"><span>Seed <b id="seedLabel"></b></span><span>Repaint with the same seed and style: same painting.</span></p>
 
-  <h2>Avatars from names</h2>
-  <p class="sub">A painted placeholder for every user, from their name alone. Nothing stored, nothing to download.</p>
+  <h2>Avatars from user IDs</h2>
+  <p class="sub">A painted placeholder per account, seeded with its numeric ID: nothing generated ahead of time, nothing stored.</p>
   <div class="avatars" id="avatars"></div>
 
-  <h2>Covers from titles</h2>
-  <p class="sub">A header image for every post, from its title.</p>
+  <h2>Covers from post IDs</h2>
+  <p class="sub">A header image per post, seeded with the post's ID.</p>
   <div class="covers" id="covers"></div>
 </main>
 
@@ -90,9 +91,9 @@ const PALETTES = [
 ];
 
 // One painting as a list of marks, from a seed alone. Coordinates are fractions of the canvas, so
-// the same composition paints at any size. `rng` is the engine's own PRNG, seeded by the word.
-function compose(word, style) {
-  const rng = PaintEngine.makeRNG(style + ':' + word);
+// the same composition paints at any size. `rng` is the engine's own PRNG, seeded by the seed.
+function compose(seed, style) {
+  const rng = PaintEngine.makeRNG(style + ':' + seed);
   const r = (a, b) => a + (b - a) * rng();
   const palette = PALETTES[Math.floor(rng() * PALETTES.length)];
   const color = () => palette[Math.floor(rng() * palette.length)];
@@ -159,13 +160,23 @@ async function paintInto(engine, w, h, comp, animate, alive = () => true) {
 
 // ── the big one ──
 const art = document.getElementById('art');
+const seedInput = document.getElementById('seed');
+const randomSeed = () => Math.floor(Math.random() * 2147483647);
+// the seed field as a non-negative integer; anything else gets a fresh random seed
+function readSeed() {
+  const v = Math.floor(Number(seedInput.value));
+  if (seedInput.value !== '' && Number.isFinite(v) && v >= 0 && v <= 2147483647) return v;
+  const s = randomSeed();
+  seedInput.value = s;
+  return s;
+}
 let big = null, run = 0;
 async function paintBig(animate) {
-  const word = document.getElementById('seed').value.trim() || 'hello world';
+  const seed = readSeed();
   const style = document.getElementById('style').value;
-  document.getElementById('seedLabel').textContent = word;
-  try { history.replaceState(null, '', '?seed=' + encodeURIComponent(word) + '&style=' + style); } catch (e) { /* file:// */ }
-  const comp = compose(word, style);
+  document.getElementById('seedLabel').textContent = seed + ' · ' + style;
+  try { history.replaceState(null, '', '?seed=' + seed + '&style=' + style); } catch (e) { /* file:// */ }
+  const comp = compose(seed, style);
   const w = art.clientWidth, h = art.clientHeight;
   if (big) big.destroy();
   big = PaintEngine.mount(art, { input: false, paper: true, seed: comp.engineSeed, scale: scaleFor(w, h) });
@@ -175,19 +186,16 @@ async function paintBig(animate) {
 
 document.getElementById('form').addEventListener('submit', (e) => { e.preventDefault(); paintBig(true); });
 document.getElementById('style').addEventListener('change', () => paintBig(true));
-const WORDS = ['montréal', 'sunday', 'marmalade', 'velvet', 'harbour', 'pistachio', 'thunder', 'ginger', 'lullaby', 'neon', 'origami', 'saffron', 'tangerine', 'glacier', 'mango', 'bonjour', 'jazz', 'lagoon'];
-document.getElementById('surprise').addEventListener('click', () => {
-  const s = document.getElementById('style');
-  document.getElementById('seed').value = WORDS[Math.floor(Math.random() * WORDS.length)];
-  s.value = s.options[Math.floor(Math.random() * s.options.length)].value;
+document.getElementById('random').addEventListener('click', () => {
+  seedInput.value = randomSeed();
   paintBig(true);
 });
 
 // Download: the same composition painted off screen at wallpaper size, finished with flush()
 document.getElementById('download').addEventListener('click', async () => {
-  const word = document.getElementById('seed').value.trim() || 'hello world';
+  const seed = readSeed();
   const style = document.getElementById('style').value;
-  const comp = compose(word, style);
+  const comp = compose(seed, style);
   const W = 1920, H = 1200;
   const canvas = document.createElement('canvas');
   const engine = PaintEngine.createPaintEngine({ canvas, dpr: 1, paper: true, seed: comp.engineSeed, scale: scaleFor(W, H), budget: { maxMarks: Infinity } });
@@ -197,35 +205,36 @@ document.getElementById('download').addEventListener('click', async () => {
   canvas.toBlob((blob) => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'paint-engine-' + word.replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '.png';
+    a.download = 'paint-engine-' + seed + '-' + style + '.png';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }, 'image/png');
 });
 
 // ── avatars and covers: small instant paintings ──
-function tile(container, word, style) {
+function tile(container, seed, style) {
   const w = container.clientWidth, h = container.clientHeight;
-  const comp = compose(word, style);
+  const comp = compose(seed, style);
   const e = PaintEngine.mount(container, { input: false, paper: true, seed: comp.engineSeed, scale: scaleFor(w, h) });
   paintInto(e, w, h, comp, false);
 }
-const NAMES = ['Ada', 'Grace', 'Linus', 'Margaret', 'Alan', 'Hedy'];
+const USER_IDS = [1042, 2317, 4488, 5120, 7731, 9906];
 const avatars = document.getElementById('avatars');
-for (const name of NAMES) {
+for (const id of USER_IDS) {
   const f = document.createElement('figure');
   f.className = 'avatar';
   f.innerHTML = '<div class="face"></div><figcaption></figcaption>';
-  f.querySelector('figcaption').textContent = name;
+  f.querySelector('figcaption').textContent = 'user ' + id;
   avatars.appendChild(f);
 }
-const TITLES = [['Ten things I learned from pottery', 'swash'], ['Why we paint on Sundays', 'bloom'], ['A field guide to Montréal murals', 'weave']];
+const POSTS = [[318, 'Ten things I learned from pottery', 'swash'], [327, 'Why we paint on Sundays', 'bloom'], [341, 'A field guide to Montréal murals', 'weave']];
 const covers = document.getElementById('covers');
-for (const [title] of TITLES) {
+for (const [id, title] of POSTS) {
   const f = document.createElement('figure');
   f.className = 'cover';
-  f.innerHTML = '<div class="img"></div><figcaption><b></b><span>seeded by its title</span></figcaption>';
+  f.innerHTML = '<div class="img"></div><figcaption><b></b><span></span></figcaption>';
   f.querySelector('b').textContent = title;
+  f.querySelector('span').textContent = 'post ' + id + ', seed ' + id;
   covers.appendChild(f);
 }
 // built once they're about to scroll into view
@@ -233,16 +242,16 @@ const io = new IntersectionObserver((entries) => {
   for (const en of entries) {
     if (!en.isIntersecting) continue;
     io.unobserve(en.target);
-    if (en.target === avatars) [...avatars.querySelectorAll('.face')].forEach((el, i) => tile(el, NAMES[i], 'bloom'));
-    else [...covers.querySelectorAll('.img')].forEach((el, i) => tile(el, TITLES[i][0], TITLES[i][1]));
+    if (en.target === avatars) [...avatars.querySelectorAll('.face')].forEach((el, i) => tile(el, USER_IDS[i], 'bloom'));
+    else [...covers.querySelectorAll('.img')].forEach((el, i) => tile(el, POSTS[i][0], POSTS[i][2]));
   }
 }, { rootMargin: '200px' });
 io.observe(avatars);
 io.observe(covers);
 
-// A link with ?seed= opens that painting
+// A link with ?seed= opens that painting; without one, the page starts on a random seed
 const params = new URLSearchParams(location.search);
-if (params.get('seed')) document.getElementById('seed').value = params.get('seed');
+seedInput.value = params.get('seed') || randomSeed();
 if (params.get('style')) document.getElementById('style').value = params.get('style');
 // painted once it's on screen: a page can load hidden or before its window has a size, with no
 // canvas size to paint at yet

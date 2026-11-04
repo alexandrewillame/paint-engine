@@ -1662,11 +1662,9 @@ function createPaintEngine(opts) {
   let rafScheduled = false;
   let stroke = null;
   // FIFO of stroke/dash marks whose recipe is pushed (budget accounting done) but whose pixels are
-  // still being drawn across frames — see endStroke / stepPendingBakes / makeMarkBakeJob.
+  // still being drawn across frames — see endStroke / stepPendingBakes / makeMarkBakeJob. Each job
+  // carries its `standIn`: the live preview it ended with, shown until the job lands in bakedCtx.
   let pendingBakes = [];
-  // The pendingBakes job activeDisplay is standing in for, kept visible until it lands in bakedCtx
-  // so a just-finished stroke doesn't blink out while its bake canvas fills in.
-  let activeDisplayPending = null;
 
   function pickColor() {
     const base = hexToRgb(pick(rngGlobal, palette));
@@ -1713,7 +1711,7 @@ function createPaintEngine(opts) {
     if (!BUDGET.maxInkArea) BUDGET.maxInkArea = 60 * W * H;
     drawPaper();
     // cancel in-flight async work — sized against the old W/H; rebuildBaked(true) below redraws all
-    pendingBakes = []; rebuildQueue = null; fade = null; activeDisplayPending = null;
+    pendingBakes = []; rebuildQueue = null; fade = null;
     rebuildBaked(true);
     requestRender();
   }
@@ -1747,7 +1745,6 @@ function createPaintEngine(opts) {
     };
     stroke.resampler.push(p.x, p.y, t);
     activeDisplayCtx.clearRect(0, 0, W, H);
-    activeDisplayPending = null;
     requestRender();
   }
 
@@ -1873,9 +1870,14 @@ function createPaintEngine(opts) {
       }
       const job = makeMarkBakeJob(built, hexToRgb(s.color));
       job.recipe = recipe;
+      // The live preview stands in for the mark until the job lands in bakedCtx. It moves to a
+      // canvas of its own, cropped to the mark, so the next stroke starts on a clean activeDisplay
+      // without wiping it: a stroke begun before the last one finished baking would otherwise make
+      // that one blink back to its half-baked pixels.
+      job.standIn = makeCanvas(job.cw, job.ch);
+      job.standIn.getContext('2d').drawImage(activeDisplay, job.rect.minX, job.rect.minY, job.cw, job.ch, 0, 0, job.cw, job.ch);
+      activeDisplayCtx.clearRect(0, 0, W, H);
       pendingBakes.push(job);
-      // keep activeDisplay's preview up as a stand-in until the job lands in bakedCtx
-      activeDisplayPending = job;
     } else {
       activeDisplayCtx.clearRect(0, 0, W, H);
     }
@@ -1988,7 +1990,7 @@ function createPaintEngine(opts) {
   function clear() {
     recipes = []; totalArea = 0;
     // cancel in-flight async work, or it could repopulate the just-cleared canvas
-    pendingBakes = []; rebuildQueue = null; fade = null; activeDisplayPending = null;
+    pendingBakes = []; rebuildQueue = null; fade = null;
     bakedCtx.clearRect(0, 0, W, H);
     activeDisplayCtx.clearRect(0, 0, W, H);
     requestRender();
@@ -2005,7 +2007,6 @@ function createPaintEngine(opts) {
     // cancel in-flight async work first, as resize() does: a pending bake for a mark that stays
     // would otherwise land a second time on top of the rebuild below
     pendingBakes = []; rebuildQueue = null; fade = null;
-    if (activeDisplayPending) { activeDisplayCtx.clearRect(0, 0, W, H); activeDisplayPending = null; }
     rebuildBaked(true);
     requestRender();
     return true;
@@ -2164,13 +2165,10 @@ function createPaintEngine(opts) {
     // (0 on the tick the last job lands), so force a render or the final mark stays invisible until
     // the next unrelated event
     needsRender = true;
-    // This job's pixels are landing in bakedCtx now (or were culled) either way, so activeDisplay no
-    // longer needs to stand in for it -- drop the placeholder before the early-return below so a
-    // culled job doesn't leave activeDisplay showing a mark that's actually gone.
-    if (job === activeDisplayPending) {
-      activeDisplayCtx.clearRect(0, 0, W, H);
-      activeDisplayPending = null;
-    }
+    // This job's pixels are landing in bakedCtx now (or were culled) either way, so its preview no
+    // longer needs to stand in for it -- dropped before the early-return below so a culled job
+    // doesn't leave a stand-in showing a mark that's actually gone.
+    job.standIn = null;
     if (job.recipe && recipes.indexOf(job.recipe) === -1) return;
     finishMarkBakeJob(job, bakedCtx);
   }
@@ -2216,12 +2214,16 @@ function createPaintEngine(opts) {
       ctx.drawImage(fade.to, 0, 0);
       ctx.restore();
     }
-    // ended marks still baking in the background, shown so they don't vanish for a few frames
+    // ended marks still baking in the background, shown so they don't vanish for a few frames: what
+    // is baked so far, then the live preview each ended with, as a stand-in until its job lands
     for (const job of pendingBakes) {
       ctx.drawImage(job.tmp, 0, 0, job.cw, job.ch, job.rect.minX, job.rect.minY, job.cw, job.ch);
     }
-    // the live preview, kept as a stand-in until its own pendingBakes job lands
-    if (stroke || activeDisplayPending) ctx.drawImage(activeDisplay, 0, 0);
+    for (const job of pendingBakes) {
+      if (job.standIn) ctx.drawImage(job.standIn, job.rect.minX, job.rect.minY);
+    }
+    // the live preview
+    if (stroke) ctx.drawImage(activeDisplay, 0, 0);
   }
 
   return {
@@ -2552,6 +2554,25 @@ function paintPage(options) {
   layer.appendChild(canvas);
   (area || document.body).appendChild(layer);
 
+  // An 'under' layer on the whole page lies on the page's canvas background, which is <body>'s,
+  // passed up to the root. Give <html> a background of its own, as dark-mode extensions (Dark
+  // Reader and the like) do, and <body>'s becomes an ordinary block painted over the layer,
+  // hiding every mark. Isolating <body> then puts the layer back between that background and the
+  // content. Re-checked at every anchor, since such styles can arrive after setup.
+  let restoreBody = null;
+  const paintsBackground = (el) => {
+    const cs = getComputedStyle(el);
+    return cs.backgroundImage !== 'none' || !/^transparent$|,\s*0\)$|\/\s*0\)$/.test(cs.backgroundColor);
+  };
+  const keepUnderVisible = () => {
+    if (area || over || restoreBody) return;
+    if (!paintsBackground(document.documentElement) || !paintsBackground(document.body)) return;
+    const before = document.body.style.isolation;
+    document.body.style.isolation = 'isolate';
+    restoreBody = () => { document.body.style.isolation = before; };
+  };
+  keepUnderVisible();
+
   // paper:false keeps untouched pixels transparent, so the page shows through. Budget off, so paint
   // stays put rather than fading as more is laid down -- affordable because finished marks live in
   // a fixed-size tile and the engine's recipe list is cleared on every re-anchor.
@@ -2689,6 +2710,7 @@ function paintPage(options) {
   };
 
   const anchorTile = () => {
+    keepUnderVisible();
     const layerH = measure();
     const vw = layer.clientWidth || window.innerWidth;
     const vh = window.innerHeight;
@@ -2899,6 +2921,7 @@ function paintPage(options) {
       engine.clear();
       layer.remove();
       if (restoreArea) restoreArea();
+      if (restoreBody) restoreBody();
     },
   };
 }

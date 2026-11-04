@@ -101,10 +101,13 @@
       await PaintEngine.paintStroke(e, bezier([w * 0.5, h * 0.88], [w * 0.62, h * 0.55], [w * 0.75, h * 0.35], [w * 0.86, h * 0.1], 30),
         { speed: 420, color: '#F04E23', animate: true });
     },
+    // about 100 px each: long enough to smear, too short to outgrow a stroke's opening splatter
     dash: async (e, w, h) => {
-      await PaintEngine.paintStroke(e, [[w * 0.28, h * 0.62], [w * 0.36, h * 0.5]], { speed: 300, color: '#3B12E8', animate: true });
+      await PaintEngine.paintStroke(e, bezier([w * 0.1, h * 0.74], [w * 0.18, h * 0.5], [w * 0.28, h * 0.42], [w * 0.4, h * 0.36], 12),
+        { speed: 300, color: '#3B12E8', animate: true });
       await wait(200);
-      await PaintEngine.paintStroke(e, [[w * 0.6, h * 0.45], [w * 0.7, h * 0.4]], { speed: 450, color: '#17A6B5', animate: true });
+      await PaintEngine.paintStroke(e, bezier([w * 0.56, h * 0.66], [w * 0.64, h * 0.52], [w * 0.74, h * 0.46], [w * 0.86, h * 0.44], 12),
+        { speed: 450, color: '#17A6B5', animate: true });
     },
   };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));

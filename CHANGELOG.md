@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- `paintPage()` with `layer: 'under'` on the whole page showed no paint at all when `<html>` had a
+  background of its own, which dark-mode extensions such as Dark Reader add: `<body>`'s background
+  covered the layer. `paintPage()` now sets `isolation: isolate` on `<body>` in that case (and only
+  then), so the paint lies between that background and the content.
+- A stroke started while the previous one was still being rendered in the background made that
+  previous stroke blink back to a partly drawn state for a few frames. Strokes painted back to back
+  from code hit this every time. Finished strokes now keep their preview until they are fully
+  rendered; the final pixels are unchanged.
+
 ## [1.0.0] - 2026-11-03
 
 First public release. The engine is the one running on
@@ -26,4 +39,5 @@ same options it paints exactly the same pixels.
   for any page, with paint under the content or blended over it, on the whole page or only inside
   one element (`area`, e.g. the hero).
 
+[Unreleased]: https://github.com/alexandrewillame/paint-engine/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/alexandrewillame/paint-engine/releases/tag/v1.0.0
