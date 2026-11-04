@@ -4,7 +4,9 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.1] - 2026-11-03
+
+A drop-in replacement for 1.0.0: same API, and finished paintings are pixel-identical.
 
 ### Fixed
 
@@ -39,5 +41,5 @@ same options it paints exactly the same pixels.
   for any page, with paint under the content or blended over it, on the whole page or only inside
   one element (`area`, e.g. the hero).
 
-[Unreleased]: https://github.com/alexandrewillame/paint-engine/compare/v1.0.0...HEAD
+[1.0.1]: https://github.com/alexandrewillame/paint-engine/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/alexandrewillame/paint-engine/releases/tag/v1.0.0

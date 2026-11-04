@@ -1,6 +1,6 @@
 {
   "name": "paint-engine",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Procedural acrylic paint for the web: drags become brush strokes, taps become splatters. One file, zero dependencies.",
   "main": "paint-engine.js",
   "module": "paint-engine.mjs",

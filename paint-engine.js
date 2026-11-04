@@ -1,5 +1,5 @@
 /*!
- * Paint Engine v1.0.0 — procedural acrylic paint for the web
+ * Paint Engine v1.0.1 — procedural acrylic paint for the web
  * (c) 2026 Alexandre Willame · MIT License
  * https://github.com/alexandrewillame/paint-engine
  */
@@ -2931,7 +2931,7 @@ function paintPage(options) {
 // ============================================================================
 
 const PaintEngine = {
-  version: '1.0.0',
+  version: '1.0.1',
   createPaintEngine,
   mount,
   paintStroke,

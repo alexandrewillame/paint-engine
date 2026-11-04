@@ -97,7 +97,7 @@ Load it from a CDN (or [download `paint-engine.js`](paint-engine.js) and host it
 ```html
 <div id="art" style="height: 400px"></div>
 
-<script src="https://cdn.jsdelivr.net/gh/alexandrewillame/paint-engine@v1.0.0/paint-engine.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/alexandrewillame/paint-engine@v1.0.1/paint-engine.js"></script>
 <script>
   const paint = PaintEngine.mount('#art');
 </script>
@@ -109,7 +109,7 @@ For a minified copy, ask jsDelivr for `paint-engine.min.js` instead (it minifies
 **Let visitors paint your whole page**, with the paint under your text:
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/alexandrewillame/paint-engine@v1.0.0/paint-engine.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/alexandrewillame/paint-engine@v1.0.1/paint-engine.js"></script>
 <script>
   PaintEngine.paintPage({ palette: ['#EE4C9B', '#8B5FBF', '#F6A6C8'] });
 </script>
