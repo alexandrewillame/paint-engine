@@ -101,13 +101,14 @@
       await PaintEngine.paintStroke(e, bezier([w * 0.5, h * 0.88], [w * 0.62, h * 0.55], [w * 0.75, h * 0.35], [w * 0.86, h * 0.1], 30),
         { speed: 420, color: '#F04E23', animate: true });
     },
-    // about 100 px each: long enough to smear, too short to outgrow a stroke's opening splatter
+    // about 80-90 px, fast and released while moving: a stroke that's barely there before it flicks
+    // off, still inside a stroke's heavy opening splatter
     dash: async (e, w, h) => {
-      await PaintEngine.paintStroke(e, bezier([w * 0.1, h * 0.74], [w * 0.18, h * 0.5], [w * 0.28, h * 0.42], [w * 0.4, h * 0.36], 12),
-        { speed: 300, color: '#3B12E8', animate: true });
+      await PaintEngine.paintStroke(e, bezier([w * 0.12, h * 0.8], [w * 0.17, h * 0.7], [w * 0.24, h * 0.62], [w * 0.32, h * 0.54], 10),
+        { speed: 900, flick: true, color: '#3B12E8', animate: true });
       await wait(200);
-      await PaintEngine.paintStroke(e, bezier([w * 0.56, h * 0.66], [w * 0.64, h * 0.52], [w * 0.74, h * 0.46], [w * 0.86, h * 0.44], 12),
-        { speed: 450, color: '#17A6B5', animate: true });
+      await PaintEngine.paintStroke(e, bezier([w * 0.5, h * 0.76], [w * 0.56, h * 0.7], [w * 0.62, h * 0.58], [w * 0.71, h * 0.46], 10),
+        { speed: 1100, flick: true, color: '#17A6B5', animate: true });
     },
   };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));

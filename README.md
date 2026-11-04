@@ -25,9 +25,9 @@
 ---
 
 Paint Engine renders mouse, touch and pen input as acrylic paint on a `<canvas>`. A stroke's width
-and dryness follow the pointer's speed (55 px wide and dense when slow, 33 px and streaky from
-900 px/s), the speed at release decides how it ends (rounded, throwing droplets, or a tapered tail),
-and a tap leaves a splatter. There are no brush images or presets: marks are stamped from small
+and dryness follow the pointer's speed (wide and dense when slow, narrower and streaky when fast),
+the speed at release decides how it ends (rounded, throwing droplets, or a tapered tail), and a tap
+leaves a splatter. There are no brush images or presets: marks are stamped from small
 sprites generated at startup. Every random choice comes from a seed, so the same input and seed give
 the same pixels; without a seed, each mark gets a random one.
 
@@ -55,7 +55,7 @@ wet: drag anywhere.
   finished strokes are rendered in 3 to 8 ms slices between frames; history is capped at 150 marks by
   default.
 - **Input.** `mount()` reads Pointer Events (mouse, touch, pen, coalesced samples). Points are filtered
-  for jitter, smoothed with a spline and resampled every 5 px, so strokes don't depend on the
+  for jitter, smoothed with a spline and resampled at even spacing, so strokes don't depend on the
   device's event rate or pixel density.
 - **Three entry points.** `mount()` makes an element paintable, `paintPage()` lets visitors paint the
   whole page or one element of it (under the content or blended over it), and `paintStroke()` paints
@@ -360,9 +360,8 @@ share links use `CompressionStream` where available.
 
 <a href="https://creativebestiesclubmtl.com/"><img src="demo/assets/img/club-desktop.webp" alt="Creative Besties Club MTL's home page, stained with pink paint" width="70%"></a>
 
-**[Creative Besties Club MTL](https://creativebestiesclubmtl.com/)**: every drag stains the page,
-every tap splatters, and you can paint on the photos. Their [paint toy](https://creativebestiesclubmtl.com/canvas)
-is the engine full-screen.
+**[Creative Besties Club MTL](https://creativebestiesclubmtl.com/)**: drags paint the page, taps
+leave splatters, and the photos can be painted on.
 
 Using Paint Engine somewhere? Open an issue with a link and I'll add it here.
 

@@ -53,32 +53,32 @@
   <div class="section__head">
     <p class="eyebrow">How it paints</p>
     <h2>What each gesture paints</h2>
-    <p>There are no brush settings: each mark is computed from the pointer's path and timestamps. Speed sets a stroke's width and dryness, the speed at release sets how it ends, and very short gestures become splatters. These six are painted from code with <code>paintStroke()</code>, at the speeds given.</p>
+    <p>There are no brush settings: each mark is computed from the pointer's path and timestamps. Speed sets a stroke's width and dryness, the speed at release sets how it ends, and very short gestures become splatters. These six are painted from code with <code>paintStroke()</code>.</p>
   </div>
   <div class="swatches">
     <figure class="swatch" data-gesture="slow">
       <div class="swatch__art"></div>
-      <figcaption><strong>Slow drag</strong> At 240 px/s: close to full width (55 px at the default scale), dense paint with a glossy edge.</figcaption>
+      <figcaption><strong>Slow drag</strong> Full width: dense paint with a glossy edge.</figcaption>
     </figure>
     <figure class="swatch" data-gesture="fast">
       <div class="swatch__art"></div>
-      <figcaption><strong>Fast drag</strong> At 1,250 px/s: the width is down to 33 px (from 900 px/s on) and the paint dries into streaks and droplets.</figcaption>
+      <figcaption><strong>Fast drag</strong> Narrower, and the paint dries into streaks and throws droplets.</figcaption>
     </figure>
     <figure class="swatch" data-gesture="flick">
       <div class="swatch__art"></div>
-      <figcaption><strong>Flick</strong> Released while still moving faster than about 920 px/s, the stroke carries on past the release point and tapers off.</figcaption>
+      <figcaption><strong>Flick</strong> Released while still moving fast, the stroke carries on past the release point and tapers off.</figcaption>
     </figure>
     <figure class="swatch" data-gesture="tap">
       <div class="swatch__art"></div>
-      <figcaption><strong>Tap</strong> Less than 9 px of movement between press and release: a splatter instead of a stroke.</figcaption>
+      <figcaption><strong>Tap</strong> Press and release without moving: a splatter instead of a stroke.</figcaption>
     </figure>
     <figure class="swatch" data-gesture="layers">
       <div class="swatch__art"></div>
-      <figcaption><strong>Overlap</strong> Marks are drawn with partial transparency, so the paint gets darker where they cross.</figcaption>
+      <figcaption><strong>Overlap</strong> Marks are partly transparent, so the paint gets darker where they cross.</figcaption>
     </figure>
     <figure class="swatch" data-gesture="dash">
       <div class="swatch__art"></div>
-      <figcaption><strong>Short drag</strong> About 100 px. A stroke's first 120 px carry extra splatter, so a drag this short stays a smear.</figcaption>
+      <figcaption><strong>Short drag</strong> A quick drag released while moving: a very short stroke that flicks off, with more spatter.</figcaption>
     </figure>
   </div>
   <p class="swatches__note"><button class="linkish" type="button" id="replaySwatches">Paint them again</button> · each run uses new random seeds, so the marks differ. Pass a <code>seed</code> and a mark repeats exactly.</p>
@@ -109,7 +109,7 @@
     </li>
     <li class="paper-card">
       <h3>Input</h3>
-      <p><code>mount()</code> reads Pointer Events: mouse, touch and pen, coalesced samples included. Points are filtered for jitter, smoothed with a spline and resampled every 5&nbsp;px, so strokes don't depend on the device's event rate or pixel density.</p>
+      <p><code>mount()</code> reads Pointer Events: mouse, touch and pen, coalesced samples included. Points are filtered for jitter, smoothed with a spline and resampled at even spacing, so strokes don't depend on the device's event rate or pixel density.</p>
     </li>
     <li class="paper-card">
       <h3>Painting a whole page</h3>
@@ -215,7 +215,6 @@ paint.splat(<span class="k">480</span>, <span class="k">90</span>);</code></pre>
       <p>Paint Engine was written for <a href="https://creativebestiesclubmtl.com/" target="_blank" rel="noopener">Creative Besties Club MTL</a>, a Montréal club that runs creative workshops and social events. Their site uses it on every page: drags paint on the page, taps leave splatters, and the photos can be painted on too.</p>
       <p class="wild__links">
         <a class="btn btn--line" href="https://creativebestiesclubmtl.com/" target="_blank" rel="noopener">Visit the site</a>
-        <a class="btn btn--line" href="https://creativebestiesclubmtl.com/canvas" target="_blank" rel="noopener">Their paint toy</a>
       </p>
       <p class="wild__fine">Screenshots from November 2026, in case the site has changed since. Members' photos blurred.</p>
     </div>
