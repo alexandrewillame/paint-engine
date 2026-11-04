@@ -1,5 +1,5 @@
 /*!
- * Paint Engine v1.0.1 — procedural acrylic paint for the web
+ * Paint Engine v1.0.2 — procedural acrylic paint for the web
  * (c) 2026 Alexandre Willame · MIT License
  * https://github.com/alexandrewillame/paint-engine
  */
@@ -2558,7 +2558,9 @@ function paintPage(options) {
   // passed up to the root. Give <html> a background of its own, as dark-mode extensions (Dark
   // Reader and the like) do, and <body>'s becomes an ordinary block painted over the layer,
   // hiding every mark. Isolating <body> then puts the layer back between that background and the
-  // content. Re-checked at every anchor, since such styles can arrive after setup.
+  // content. Such styles often arrive after this setup, even after the first paint (Dark Reader waits
+  // on its background worker), so it's re-checked whenever the page's styles change, at every
+  // gesture and at every anchor.
   let restoreBody = null;
   const paintsBackground = (el) => {
     const cs = getComputedStyle(el);
@@ -2572,6 +2574,19 @@ function paintPage(options) {
     restoreBody = () => { document.body.style.isolation = before; };
   };
   keepUnderVisible();
+  // "the page's styles change": <style>/<link> elements arriving in <head> or <html> (an extension's),
+  // or a class or style on <html> or <body> (a site's own theme switch). Watched until it isolates.
+  let styleWatch = null;
+  if (!area && !over && !restoreBody && typeof MutationObserver === 'function') {
+    styleWatch = new MutationObserver(() => {
+      keepUnderVisible();
+      if (restoreBody && styleWatch) { styleWatch.disconnect(); styleWatch = null; }
+    });
+    const attrs = { attributes: true, attributeFilter: ['class', 'style'] };
+    styleWatch.observe(document.documentElement, Object.assign({ childList: true }, attrs));
+    if (document.head) styleWatch.observe(document.head, { childList: true });
+    styleWatch.observe(document.body, attrs);
+  }
 
   // paper:false keeps untouched pixels transparent, so the page shows through. Budget off, so paint
   // stays put rather than fading as more is laid down -- affordable because finished marks live in
@@ -2785,6 +2800,7 @@ function paintPage(options) {
   };
 
   const startStroke = (id, clientX, clientY, t) => {
+    keepUnderVisible();
     userStrokeBegan(engine); // first: finishes a stroke from code still animating in the old tile
     if (!tileCovers()) anchorTile(); // at most once per gesture
     const px = clientX + window.scrollX, py = clientY + window.scrollY;
@@ -2867,6 +2883,7 @@ function paintPage(options) {
   // From code, in page coordinates. The tile is anchored on the reader first (unless a stroke is
   // open on it); a mark outside the tile has nowhere to go and is skipped.
   const ready = () => {
+    keepUnderVisible();
     if (!busy() && !tileCovers()) anchorTile();
     return painted;
   };
@@ -2921,6 +2938,7 @@ function paintPage(options) {
       engine.clear();
       layer.remove();
       if (restoreArea) restoreArea();
+      if (styleWatch) styleWatch.disconnect();
       if (restoreBody) restoreBody();
     },
   };
@@ -2931,7 +2949,7 @@ function paintPage(options) {
 // ============================================================================
 
 const PaintEngine = {
-  version: '1.0.1',
+  version: '1.0.2',
   createPaintEngine,
   mount,
   paintStroke,

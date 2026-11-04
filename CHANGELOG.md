@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] - 2026-11-03
+
+### Fixed
+
+- `paintPage()`: the dark-mode fix in 1.0.1 only looked for a background on `<html>` when the page
+  set up and when the paint canvas moved. Dark Reader usually restyles a page a little later, after
+  the first marks, so on many visits the paint stayed hidden, even while painting. `paintPage()` now
+  also checks whenever `<style>` or `<link>` elements arrive or `<html>` or `<body>` change class or
+  style, at every gesture, and before painting from code.
+
 ## [1.0.1] - 2026-11-03
 
 A drop-in replacement for 1.0.0: same API, and finished paintings are pixel-identical.
@@ -41,5 +51,6 @@ same options it paints exactly the same pixels.
   for any page, with paint under the content or blended over it, on the whole page or only inside
   one element (`area`, e.g. the hero).
 
+[1.0.2]: https://github.com/alexandrewillame/paint-engine/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/alexandrewillame/paint-engine/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/alexandrewillame/paint-engine/releases/tag/v1.0.0
